@@ -16,6 +16,9 @@
 #ifndef ENC28J60_H
 #define ENC28J60_H
 #include <inttypes.h>
+#include <arduino.h>
+#include <SPI.h>
+#include "util.h"
 
 /*
  * ENC28J60 Control Registers
@@ -307,15 +310,50 @@
 // start with recbuf at 0/
 #define RXSTART_INIT     0x0
 // receive buffer end. make sure this is an odd value ( See Rev. B1,B4,B5,B7 Silicon Errata 'Memory (Ethernet Buffer)')
-#define RXSTOP_INIT      (0x1FFF-0x1800)
+#define RXSTOP_INIT      (0x1FFF-0x1800) /* = 2047, 0x07ff */
 // start TX buffer RXSTOP_INIT+1
 #define TXSTART_INIT     (RXSTOP_INIT+1)
 // stp TX buffer at end of mem
 #define TXSTOP_INIT      0x1FFF
 //
 // max frame length which the conroller will accept:
-#define        MAX_FRAMELEN        1500        // (note: maximum ethernet frame length would be 1518)
-//#define MAX_FRAMELEN     600
+#define        MAX_FRAMELEN        1500  // (0x05dc, note: maximum ethernet frame length would be 1518)
+/* Preferred half duplex: LEDA: Link status LEDB: Rx/Tx activity */
+#define ENC28J60_LAMPS_MODE	0x3476
 
+#define CS_PIN 10
+#define CS_DELAY 10
+#define WORD_DELAY 10
+#define RESET_DELAY 2000
+#define SPI_MODE SPI_MODE3
+#define SPI_SPEED 50000
+#define INT_PIN 9
+#define POLL_TIMEOUT 20
+
+#define REPEAT_BREAKPOINTS
+
+#define FULL_DUPLEX 0
+
+void enc_op_write(byte op, byte arg, byte data);
+byte enc_op_read(uint8_t op, uint8_t arg);
+void enc_soft_reset();
+void enc_bank_sel(byte reg);
+byte enc_read_reg(byte reg);
+uint16_t enc_read_regw(byte reg);
+void enc_write_reg(byte reg, byte value);
+void enc_write_regw(byte reg, uint16_t value);
+void enc_bit_set(byte reg, byte bits);
+void enc_bit_clr(byte reg, byte bits);
+void enc_write_buf(byte * data, uint8_t len);
+void enc_read_buf(byte * data, uint8_t len);
+void enc_set_mac_addr(byte * mac_addr);
+void enc_reg_print(String name, byte reg);
+void enc_regs_print(String name, byte reg, int n_regs);
+void enc_regs_debug();
+int enc_hw_init();
+void enc_hw_enable();
+void enc_hw_disable();
+
+extern SPISettings spiSettings;
 
 #endif
