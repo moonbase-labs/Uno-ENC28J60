@@ -318,7 +318,11 @@
 #define TXSTOP_INIT      0x1FFF
 //
 // max frame length which the conroller will accept:
-#define        MAX_FRAMELEN        1500  // (0x05dc, note: maximum ethernet frame length would be 1518)
+#define MAX_FRAMELEN        1500  // (0x05dc, note: maximum ethernet frame length would be 1518)
+#define RSV_LEN 4 // length of recieve status vector in bytes
+
+
+
 /* Preferred half duplex: LEDA: Link status LEDB: Rx/Tx activity */
 #define ENC28J60_LAMPS_MODE	0x3476
 
@@ -326,30 +330,8 @@
  * Timing
  */
 
-#define NANOS_2_MILLIS(x) (x/1000 + 1)
-
-#define CS_PIN 10
-// CS Setup time, micros (Table 16-6)
-#define CS_SETUP_MS NANOS_2_MILLIS(50)
-// CS Hold time, micros (Table 16-6)
-#define CS_HOLD_MS NANOS_2_MILLIS(10)
-// CS Hold time, micros for MAC & MII  (Table 16-6)
-#define CS_HOLD_M_MS NANOS_2_MILLIS(210)
-// CS Disable time, micros (Table 16-6)
-#define CS_DISABLE_MS NANOS_2_MILLIS(50)
-#define WORD_DELAY 10
 #define RESET_DELAY 2000
-#define MODE_CHANGE_DELAY_MS 10
 
-/**
- * SPI Settings
- */
-
-#define SPI_MODE SPI_MODE0
-
-// #define SPI_SPEED 50000
-#define SPI_SPEED 9000000
-#define INT_PIN 9
 #define POLL_TIMEOUT 20
 
 #define FULL_DUPLEX 1
@@ -358,7 +340,6 @@
  * Debugging
  */
 #define REPEAT_BREAKPOINTS 0
-// #define USE_SPI_LIBRARY 1
 
 #define DEBUG_OP_RW 0
 

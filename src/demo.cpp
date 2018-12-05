@@ -8,6 +8,7 @@
 #include "ENC28J60.h"
 #include "util.h"
 #include "demo.h"
+#include "enc_spi.h"
 
 void demo_read_reg() {
     byte result;

@@ -1,36 +1,15 @@
-#include <SPI.h>
 #include <inttypes.h>
 #include "ENC28J60.h"
 #include "demo.h"
+#include "enc_spi.h"
 #include <arduino.h>
 
-SPISettings spiSettings;
 
 void setup() {
     Serial.begin(9600);
     Serial.println("SETUP");
 
-    // Set Pin Modes
-    pinMode(CS_PIN, OUTPUT);
-    pinMode(MOSI, OUTPUT);
-    pinMode(SCK, OUTPUT);
-    pinMode(INT_PIN, INPUT);
-    pinMode(MISO, INPUT);
-    #ifdef USE_SPI_LIBRARY
-        SPI.begin();
-        spiSettings = SPISettings(SPI_SPEED, MSBFIRST, SPI_MODE);
-    #else
-        SPCR =
-            (1<<SPE) // SPI Enable
-            |(1<<MSTR) // SPI Master
-            |SPI_MODE
-            // |(1<<SPR1)|(1<<SPR0); // SPI Clk divider = 128
-        ;
-    #endif
-
-    digitalWrite(MOSI, LOW);
-    digitalWrite(SCK, LOW);
-    digitalWrite(CS_PIN, HIGH);
+    spi_init();
 
     Serial.print("SPI_MODE is 0x");
     Serial.println(SPI_MODE, HEX);

@@ -1,88 +1,5 @@
 #include "ENC28J60.h"
-
-/**
- * SPI stuff
- * could have its own source file
- */
-
-#define waitspi() while(!(SPSR&(1<<SPIF)))
-
-inline void _changeSPIMode(byte mode) {
-    delayMicroseconds(MODE_CHANGE_DELAY_MS);
-    SPCR = (SPCR & (~SPI_MODE3)) | mode;
-    delayMicroseconds(MODE_CHANGE_DELAY_MS);
-}
-
-inline void _beginTransaction(SPISettings spiSettings) {
-
-    // digitalWrite(MOSI, LOW);
-    // digitalWrite(SCK, LOW);
-    digitalWrite(CS_PIN, LOW);
-
-    delayMicroseconds(CS_SETUP_MS);
-    #ifdef USE_SPI_LIBRARY
-        SPI.beginTransaction(spiSettings);
-    #else
-        noInterrupts();
-        // _changeSPIMode(SPI_MODE);
-    #endif
-}
-
-// inline byte _spiTransfer(byte data) {
-//     byte response;
-//     #ifdef USE_SPI_LIBRARY
-//         response = SPI.transfer(data);
-//     #else
-//         // Clear SPI mode
-//         _changeSPIMode(SPI_MODE);
-//         SPDR = data;
-//         waitspi();
-//         response = SPDR;
-//         _changeSPIMode(SPI_MODE);
-//         digitalWrite(MOSI, LOW);
-//     #endif
-//     delayMicroseconds(WORD_DELAY);
-//     return response;
-// }
-
-inline byte _spiRead() {
-    byte response;
-    #ifdef USE_SPI_LIBRARY
-        response = SPI.transfer(0);
-    #else
-        // _changeSPIMode(SPI_MODE);
-        SPDR = 0;
-        waitspi();
-        response = SPDR;
-        // digitalWrite(MOSI, LOW);
-    #endif
-    delayMicroseconds(WORD_DELAY);
-    return response;
-}
-
-inline void _spiWrite(byte data) {
-    #ifdef USE_SPI_LIBRARY
-        SPI.transfer(data);
-    #else
-        // _changeSPIMode(SPI_MODE);
-        SPDR = data;
-        waitspi();
-        // _changeSPIMode(SPI_MODE);
-        // digitalWrite(MOSI, LOW);
-    #endif
-    delayMicroseconds(WORD_DELAY);
-}
-
-inline void _endTransaction() {
-    #if USE_SPI_LIBRARY
-        SPI.endTransaction();
-    #else
-        interrupts();
-    #endif
-    digitalWrite(CS_PIN, HIGH);
-    // digitalWrite(MOSI, LOW);
-    delayMicroseconds(CS_DISABLE_MS);
-}
+#include "enc_spi.h"
 
 /**
  * ENC specific stuff
@@ -131,9 +48,9 @@ void enc_op_write(byte op, byte arg, byte data) {
     _spiWrite(data);
     if(arg & SPRD_MASK) {
         // extra hold time for MAC/MII commands
-        delayMicroseconds(CS_HOLD_M_MS);
+        delayMicroseconds(CS_HOLD_M_US);
     } else {
-        delayMicroseconds(CS_HOLD_MS);
+        delayMicroseconds(CS_HOLD_US);
     }
     _endTransaction();
 
@@ -435,13 +352,6 @@ uint16_t _erxrdpt_workaround(uint16_t erxrdpt, uint16_t start, uint16_t end) {
 }
 
 /**
- * Initialize SPI
- */
-void spi_init() {
-
-}
-
-/**
  * Hardware initialization, based off linux drivers,
 
  */
@@ -472,7 +382,8 @@ int enc_hw_init() {
     /* 6.1: set receive buffer start + end */
     enc_write_regw(ERXSTL, RXSTART_INIT);
     enc_write_regw(ERXNDL, RXSTOP_INIT);
-    enc_write_regw(ERXRDPTL, _erxrdpt_workaround(RXSTART_INIT, ERXSTL, RXSTOP_INIT));
+    enc_write_regw(ERXRDPTL, _erxrdpt_workaround(RXSTART_INIT, RXSTART_INIT, RXSTOP_INIT));
+    enc_write_regw(ERDPTL, 0);
     /* 6.2: set transmit buffer start + end */
     enc_write_regw(ETXSTL, TXSTART_INIT);
     enc_write_regw(ETXNDL, TXSTOP_INIT);
