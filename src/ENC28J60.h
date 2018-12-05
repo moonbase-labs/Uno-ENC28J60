@@ -363,7 +363,6 @@ void enc_regs_debug();
 int enc_hw_init();
 void enc_hw_enable();
 void enc_hw_disable();
-
-extern SPISettings spiSettings;
+void enc_dump_buf(int len);
 
 #endif

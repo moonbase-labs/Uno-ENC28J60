@@ -502,7 +502,49 @@ void enc_regs_print(String name, byte reg, int n_regs) {
     Serial.println();
 }
 
+void enc_dump_buf(int len) {
+    uint16_t old_erdpt = enc_read_regw(ERDPTL);
+    byte buf_byte;
+    Serial.println("buffer: ");
+    for( int i=0; i<len; i++){
+        enc_read_buf(&buf_byte, 1);
+        if(buf_byte<0x10) Serial.print(0);
+        Serial.print(buf_byte, HEX);
+    }
 
+    enc_write_regw(ERDPTL, old_erdpt);
+}
+
+/**
+ * Dumps the NPP and Receive status vector located at ERDPT
+ */
+
+byte * rsv_buf = (byte *) malloc(RSV_LEN * sizeof(byte) + 1);
+
+void enc_dump_npp_rsv() {
+    struct { uint8_t lsb; uint8_t msb; } npp;
+    uint16_t old_erdpt = enc_read_regw(ERDPTL);
+
+    Serial.print("old_erdpt: ");
+    Serial.println(old_erdpt, HEX);
+
+    enc_read_buf((byte *)(&npp), 2);
+    Serial.print("npp: 0x");
+    Serial.print(npp.msb, HEX);
+    Serial.println(npp.lsb, HEX);
+
+    enc_read_buf((byte *)(rsv_buf), RSV_LEN);
+    for( int i=0; i<RSV_LEN; i++){
+        Serial.print("rsv ");
+        if(i<0x10) Serial.print(0);
+        Serial.print(i, HEX);
+        Serial.print(" ");
+        if(rsv_buf[i]<0x10) Serial.print(0);
+        Serial.println(rsv_buf[i], HEX);
+    }
+
+    enc_write_regw(ERDPTL, old_erdpt);
+}
 
 void enc_regs_debug() {
     Serial.println("\nHwRevID:\n------");

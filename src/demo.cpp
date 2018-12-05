@@ -375,6 +375,11 @@ void demo_receive() {
 
         enc_regs_debug();
         enc_hw_disable();
+
+        enc_dump_buf(100);
+
+        enc_dump_npp_rsv();
+
         delay(100);
         do {
         } while (!Serial.available());
