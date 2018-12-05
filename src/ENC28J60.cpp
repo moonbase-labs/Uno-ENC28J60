@@ -5,6 +5,8 @@
  * ENC specific stuff
  */
 
+uint16_t g_next_packet = RXSTART_INIT;
+
 inline byte _first_byte(byte op, byte arg) {
     // assembe first byte in operation from opcode and argument
     return op | (arg & ADDR_MASK);
@@ -43,45 +45,47 @@ void enc_op_write(byte op, byte arg, byte data) {
 
     do {
 
-    _beginTransaction(spiSettings);
-    _spiWrite(_first_byte(op, arg));
-    _spiWrite(data);
-    if(arg & SPRD_MASK) {
-        // extra hold time for MAC/MII commands
-        delayMicroseconds(CS_HOLD_M_US);
-    } else {
-        delayMicroseconds(CS_HOLD_US);
-    }
-    _endTransaction();
+        _beginTransaction(spiSettings);
+        _spiWrite(_first_byte(op, arg));
+        _spiWrite(data);
+        if(arg & SPRD_MASK) {
+            // extra hold time for MAC/MII commands
+            delayMicroseconds(CS_HOLD_M_US);
+        } else {
+            delayMicroseconds(CS_HOLD_US);
+        }
+        _endTransaction();
 
-    #if REPEAT_BREAKPOINTS
-    if ((millis() - last_print) > PRINT_DELAY) {
-    #else
-    if (DEBUG_OP_RW) {
-    #endif
-        Serial.print("SPCR is 0x");
-        Serial.print(SPCR, HEX);
-        if(ENC28J60_WRITE_CTRL_REG == op) {
-            Serial.print(" | writing 0x");
+        #if REPEAT_BREAKPOINTS
+        if ((millis() - last_print) > PRINT_DELAY)
+        #else
+        if (DEBUG_OP_RW)
+        #endif
+        {
+            Serial.print("SPCR is 0x");
+            Serial.print(SPCR, HEX);
+            if(ENC28J60_WRITE_CTRL_REG == op) {
+                Serial.print(" | writing 0x");
+            }
+            else if(ENC28J60_BIT_FIELD_SET == op) {
+                Serial.print(" | setting mask 0x");
+            }
+            else if(ENC28J60_BIT_FIELD_CLR == op) {
+                Serial.print(" | clearing mask 0x");
+            }
+            Serial.print(data, HEX);
+            Serial.print(" in arg ");
+            Serial.print(arg & ADDR_MASK, HEX);
+            Serial.print(" with ");
+            Serial.println(op, HEX);
+            last_print = millis();
         }
-        else if(ENC28J60_BIT_FIELD_SET == op) {
-            Serial.print(" | setting mask 0x");
-        }
-        else if(ENC28J60_BIT_FIELD_CLR == op) {
-            Serial.print(" | clearing mask 0x");
-        }
-        Serial.print(data, HEX);
-        Serial.print(" in arg ");
-        Serial.print(arg & ADDR_MASK, HEX);
-        Serial.print(" with ");
-        Serial.println(op, HEX);
-        last_print = millis();
     }
     #if REPEAT_BREAKPOINTS
-    } while (!Serial.available());
-    while (Serial.available()){Serial.read();delay(1);}
+        while (!Serial.available());
+        while (Serial.available()){Serial.read();delay(1);}
     #else
-    } while (0);
+        while (0);
     #endif
 
 }
@@ -102,35 +106,36 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
     byte result = 0x00;
 
     do {
+        _beginTransaction(spiSettings);
+        _spiWrite(_first_byte(op, arg));
+        // handle dummy byte for certain RCRs
+        if(arg & SPRD_MASK) _spiRead();
+        // clock in response
+        result = _spiRead();
+        _endTransaction();
 
-    _beginTransaction(spiSettings);
-    _spiWrite(_first_byte(op, arg));
-    // handle dummy byte for certain RCRs
-    if(arg & SPRD_MASK) _spiRead();
-    // clock in response
-    result = _spiRead();
-    _endTransaction();
-
-    #if REPEAT_BREAKPOINTS
-    if ((millis() - last_print) > PRINT_DELAY) {
-    #else
-    if (DEBUG_OP_RW) {
-    #endif
-        Serial.print("SPCR is 0x");
-        Serial.print(SPCR, HEX);
-        Serial.print(" | reading 0x");
-        Serial.print(result, HEX);
-        Serial.print(" from arg ");
-        Serial.print(arg & ADDR_MASK, HEX);
-        Serial.print(" with ");
-        Serial.println(op, HEX);
-        last_print = millis();
+        #if REPEAT_BREAKPOINTS
+        if ((millis() - last_print) > PRINT_DELAY)
+        #else
+        if (DEBUG_OP_RW)
+        #endif
+        {
+            Serial.print("SPCR is 0x");
+            Serial.print(SPCR, HEX);
+            Serial.print(" | reading 0x");
+            Serial.print(result, HEX);
+            Serial.print(" from arg ");
+            Serial.print(arg & ADDR_MASK, HEX);
+            Serial.print(" with ");
+            Serial.println(op, HEX);
+            last_print = millis();
+        }
     }
     #if REPEAT_BREAKPOINTS
-    } while (!Serial.available());
-    while (Serial.available()){Serial.read();delay(1);}
+        while (!Serial.available());
+        while (Serial.available()){Serial.read();delay(1);}
     #else
-    } while (0);
+        while (0);
     #endif
 
     return result;
@@ -320,7 +325,7 @@ byte enc_read_buf_b() {
 /**
  * Read single 16b word from buffer (LSB first)
  */
-uint16_t enc_read_buf_w16() {
+uint16_t enc_read_buf_w() {
     union {uint16_t val; struct {byte lsb, msb;};} word;
     _beginTransaction(spiSettings);
     _spiWrite(ENC28J60_READ_BUF_MEM);
@@ -369,11 +374,39 @@ bool enc_phy_write(byte addr, uint16_t val){
  * ERXRDPT must only be set at odd addresses, refer to errata datasheet #14
  */
 uint16_t _erxrdpt_workaround(uint16_t erxrdpt, uint16_t start, uint16_t end) {
-    if ((erxrdpt - 1 < start) || (erxrdpt - 1 > end)) {
+    if( (erxrdpt - 1 < start) || (erxrdpt - 1 > end)) {
 		return end;
 	} else {
 		return ((erxrdpt - 1) | 1);
 	}
+}
+
+int _bounded_distance(int from, int to, int bst, int bnd) {
+    if (bst > bnd) {
+        Serial.println("ERR: bad _buffer_distance arg: bst > bnd");
+        return 0;
+    }
+    if(from < bst) {
+        Serial.println("ERR: bad _buffer_distance arg: from < bst");
+        return 0;
+    }
+    if(from > bnd) {
+        Serial.println("ERR: bad _buffer_distance arg: from > bnd");
+        return 0;
+    }
+    if(to < bst) {
+        Serial.println("ERR: bad _buffer_distance arg: to < bst");
+        return 0;
+    }
+    if(to > bnd) {
+        Serial.println("ERR: bad _buffer_distance arg: to > bnd");
+        return 0;
+    }
+    if(from >= to) {
+        return (from - to);
+    } else {
+        return (bnd - bst) + (from - to);
+    }
 }
 
 /**
@@ -381,16 +414,8 @@ uint16_t _erxrdpt_workaround(uint16_t erxrdpt, uint16_t start, uint16_t end) {
  *   - erdpt wraps from erxnd to erxst.
  *   - erxst and erxnd never deviate from RXSTART_INIT and RXSTOP_INIT
  */
-uint16_t _buffer_distance(uint16_t from, uint16_t to) {
-    if(int(from) < RXSTART_INIT || from > RXSTOP_INIT) {
-        Serial.println("ERR: bad _buffer_distance arg: from");
-        return 0;
-    }
-
-    if(int(to) < RXSTART_INIT || to > RXSTOP_INIT) {
-        Serial.println("ERR: bad _buffer_distance arg: from");
-        return 0;
-    }
+uint16_t _buffer_distance(int from, int to) {
+    return (uint16_t)_bounded_distance(from, to, RXSTART_INIT, RXSTOP_INIT);
 }
 
 /**
@@ -544,7 +569,7 @@ void enc_regs_print(String name, byte reg, int n_regs) {
     Serial.println();
 }
 
-void enc_dump_buf(int len) {
+void enc_peek_buf(int len) {
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
     byte buf_byte;
     for( int i=0; i<len; i++){
@@ -556,36 +581,84 @@ void enc_dump_buf(int len) {
     enc_write_regw(ERDPTL, old_erdpt);
 }
 
-/**
- * Dumps the NPP and Receive status vector located at ERDPT and maybe a packet!
- */
+inline void _enc_dump_rx_status() {
+    rsv_msb status;
+    status.val = enc_read_buf_w();
 
-void enc_dump_npp_rsv_pkt() {
+    Serial.print("status:");
+    Serial.print("-> rxvlan: 0x"); Serial.println(status.rxvlan, HEX);
+    Serial.print("-> unkn: 0x"); Serial.println(status.unkn, HEX);
+    Serial.print("-> rxpcf: 0x"); Serial.println(status.rxpcf, HEX);
+    Serial.print("-> rxcf: 0x"); Serial.println(status.rxcf, HEX);
+    Serial.print("-> drib: 0x"); Serial.println(status.drib, HEX);
+    Serial.print("-> rxbcpkt: 0x"); Serial.println(status.rxbcpkt, HEX);
+    Serial.print("-> rxmckpt: 0x"); Serial.println(status.rxmckpt, HEX);
+    Serial.print("-> rxok: 0x"); Serial.println(status.rxok, HEX);
+    Serial.print("-> e_range: 0x"); Serial.println(status.e_range, HEX);
+    Serial.print("-> e_lenchk: 0x"); Serial.println(status.e_lenchk, HEX);
+    Serial.print("-> e_crc: 0x"); Serial.println(status.e_crc, HEX);
+    Serial.print("-> ceps: 0x"); Serial.println(status.ceps, HEX);
+    Serial.print("-> longdrop: 0x"); Serial.println(status.longdrop, HEX);
+}
+
+/**
+ * Temporary MAC address storage on the stack
+ */
+byte * mac = (byte *)malloc(MAC_BYTES*sizeof(byte));
+
+inline void _print_mac() {
+    for(int i=0; i<MAC_BYTES; i++){
+        if(i>0) Serial.print(":");
+        if(mac[i]<0x10) Serial.print(0);
+        Serial.print(mac[i], HEX);
+    }
+    Serial.println();
+}
+
+inline void _enc_dump_pkt(int rbcnt) {
+    Serial.print("-> DA: ");
+    enc_read_buf(mac, MAC_BYTES);
+    rbcnt -= MAC_BYTES;
+    _print_mac();
+    Serial.print("-> SA: ");
+    enc_read_buf(mac, MAC_BYTES);
+    rbcnt -= MAC_BYTES;
+    _print_mac();
+    Serial.print("-> TYP/LEN: ");
+    uint16_t typ_len = enc_read_buf_w();
+    rbcnt -= MAC_BYTES;
+    Serial.println(typ_len);
+    Serial.print("-> (rbcnt remaining): ");
+    Serial.println(rbcnt);
+
+    enc_peek_buf(rbcnt);
+}
+
+/**
+ * Dumps the NPP, Receive status vector and packet located at ERDPT, seeks back
+ */
+void enc_peek_npp_rsv_pkt() {
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
 
-    rsv_msb status;
+    uint16_t rbcnt;
 
-    Serial.print("old_erdpt: ");
+    Serial.print("old erdpt: ");
     Serial.println(old_erdpt, HEX);
 
     /* next packet pointer, recieved bytes count, recieved ok */
-    uint16_t npp = enc_read_buf_w16();
+    g_next_packet = enc_read_buf_w();
 
-    // enc_read_buf((byte *)(&npp), 2);
-    Serial.print("npp: 0x");
-    Serial.println(npp, HEX);
+    Serial.print("next packet: 0x");
+    Serial.println(g_next_packet, HEX);
 
-    uint16_t rbcnt = enc_read_buf_w16();
-
-    status.val = enc_read_buf_w16();
-
-    Serial.print("status: 0x");
-    Serial.println(status.val, HEX);
+    rbcnt = enc_read_buf_w();
     Serial.print("rbcnt: ");
     Serial.println(rbcnt);
 
-    Serial.println("next packet: ");
-    enc_dump_buf(rbcnt);
+    _enc_dump_rx_status();
+
+    Serial.println("packet: ");
+    _enc_dump_pkt(rbcnt);
 
     enc_write_regw(ERDPTL, old_erdpt);
 }

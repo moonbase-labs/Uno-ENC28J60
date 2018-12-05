@@ -377,9 +377,11 @@ void demo_receive() {
         enc_hw_disable();
 
         Serial.println("buffer: ");
-        enc_dump_buf(100);
+        enc_peek_buf(100);
+        enc_peek_npp_rsv_pkt();
 
-        enc_dump_npp_rsv_pkt();
+        uint16_t old_erdpt = enc_read_regw(ERDPTL);
+
 
         delay(100);
         do {

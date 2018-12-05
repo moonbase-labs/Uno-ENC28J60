@@ -337,6 +337,13 @@
 #define FULL_DUPLEX 1
 
 /**
+ * Constants
+ */
+
+#define MAC_BYTES 6
+
+
+/**
  * Debugging
  */
 #define REPEAT_BREAKPOINTS 0
@@ -356,6 +363,8 @@ void enc_bit_set(byte reg, byte bits);
 void enc_bit_clr(byte reg, byte bits);
 void enc_write_buf(byte * data, uint8_t len);
 void enc_read_buf(byte * data, uint8_t len);
+byte enc_read_buf_b();
+uint16_t enc_read_buf_w();
 void enc_set_mac_addr(byte * mac_addr);
 void enc_reg_print(String name, byte reg);
 void enc_regs_print(String name, byte reg, int n_regs);
@@ -363,7 +372,7 @@ void enc_regs_debug();
 int enc_hw_init();
 void enc_hw_enable();
 void enc_hw_disable();
-void enc_dump_buf(int len);
+void enc_peek_buf(int len);
 
 /**
  * Most significant 16 bits of Recieve Status Vector,
