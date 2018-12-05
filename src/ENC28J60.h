@@ -172,7 +172,6 @@
 #define ECON1_RXEN	0x04
 #define ECON1_BSEL1	0x02
 #define ECON1_BSEL0	0x01
-
 #define ECON1_BSEL_MASK (ECON1_BSEL1 | ECON1_BSEL0)
 /* ENC28J60 MACON1 Register Bit Definitions */
 #define MACON1_LOOPBK	0x10
@@ -196,6 +195,8 @@
 #define MACON3_HFRMLEN	0x04
 #define MACON3_FRMLNEN	0x02
 #define MACON3_FULDPX	0x01
+/* ENC28J60 MACON4 Register Bit Definitions */
+#define MACON4_DEFER    0x40
 /* ENC28J60 MICMD Register Bit Definitions */
 #define MICMD_MIISCAN	0x02
 #define MICMD_MIIRD	0x01
@@ -321,20 +322,46 @@
 /* Preferred half duplex: LEDA: Link status LEDB: Rx/Tx activity */
 #define ENC28J60_LAMPS_MODE	0x3476
 
+/**
+ * Timing
+ */
+
+#define NANOS_2_MILLIS(x) (x/1000 + 1)
+
 #define CS_PIN 10
-#define CS_DELAY 10
+// CS Setup time, micros (Table 16-6)
+#define CS_SETUP_MS NANOS_2_MILLIS(50)
+// CS Hold time, micros (Table 16-6)
+#define CS_HOLD_MS NANOS_2_MILLIS(10)
+// CS Hold time, micros for MAC & MII  (Table 16-6)
+#define CS_HOLD_M_MS NANOS_2_MILLIS(210)
+// CS Disable time, micros (Table 16-6)
+#define CS_DISABLE_MS NANOS_2_MILLIS(50)
 #define WORD_DELAY 10
 #define RESET_DELAY 2000
-#define SPI_MODE SPI_MODE3
-#define SPI_SPEED 50000
+#define MODE_CHANGE_DELAY_MS 10
+
+/**
+ * SPI Settings
+ */
+
+#define SPI_MODE SPI_MODE0
+
+// #define SPI_SPEED 50000
+#define SPI_SPEED 9000000
 #define INT_PIN 9
 #define POLL_TIMEOUT 20
 
+#define FULL_DUPLEX 1
 
-#define REPEAT_BREAKPOINTS 1
+/**
+ * Debugging
+ */
+#define REPEAT_BREAKPOINTS 0
 // #define USE_SPI_LIBRARY 1
 
-#define FULL_DUPLEX 0
+#define DEBUG_OP_RW 0
+
 
 void enc_op_write(byte op, byte arg, byte data);
 byte enc_op_read(uint8_t op, uint8_t arg);

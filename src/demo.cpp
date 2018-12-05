@@ -2,13 +2,12 @@
  Demo code used to test connectivity with ENC, not actually used
  */
 
-#if 0
-
 #include <Arduino.h>
 #include <SPI.h>
 #include <inttypes.h>
 #include "ENC28J60.h"
 #include "util.h"
+#include "demo.h"
 
 void demo_read_reg() {
     byte result;
@@ -63,29 +62,47 @@ void demo_read_reg() {
     // Doesn't work in SPI_MODE0
 }
 
+void demo_bitflip() {
+    byte result;
+
+    Serial.print("View the ECON1 register (should be initialized to 0x00): 0x");
+    result = enc_read_reg(ECON1);
+    Serial.println(result, HEX);
+    Serial.print("Set the ECON1_RXEN bit field (Enable Recieve)");
+    enc_bit_set(ECON1, ECON1_RXEN);
+    Serial.print("View the ECON1 register (should be set to 0x04): 0x");
+    result = enc_read_reg(ECON1);
+    Serial.println(result, HEX);
+    Serial.print("clear the ECON1_RXEN bit field (Enable Recieve)");
+    enc_bit_clr(ECON1, ECON1_RXEN);
+    Serial.print("View the ECON1 register (should be set to 0x00): 0x");
+    result = enc_read_reg(ECON1);
+    Serial.println(result, HEX);
+}
+
 void demo_write_reg() {
     byte result;
     Serial.print("View the ERXSTL:ERXSTH registers (should be initialized to 0xfa, 0x05): 0x");
     result = enc_read_reg(ERXSTL);
     Serial.print(result, HEX);
     Serial.print(", 0x");
-    result = enc_read_reg(ERXSTH);
+    // result = enc_read_reg(ERXSTH);
     Serial.println(result, HEX);
 
     Serial.println("set the ERXSTL:ERXSTH registers to (0xaa, 0x05):");
     enc_write_reg(ERXSTL, 0xaa);
-    enc_write_reg(ERXSTH, 0x05);
+    // enc_write_reg(ERXSTH, 0x05);
 
     Serial.print("View the ERXSTL:ERXSTH registers (should now be set to 0xaa, 0x05): 0x");
     result = enc_read_reg(ERXSTL);
     Serial.print(result, HEX);
     Serial.print(", 0x");
-    result = enc_read_reg(ERXSTH);
+    // result = enc_read_reg(ERXSTH);
     Serial.println(result, HEX);
 
     Serial.println("return the ERXSTL:ERXSTH registers to (0xfa, 0x05):");
     enc_write_reg(ERXSTL, 0xfa);
-    enc_write_reg(ERXSTH, 0x05);
+    // enc_write_reg(ERXSTH, 0x05);
 
     // Doesn't work in SPI_MODE1, SPI_MODE2,
     // Works in SPI_MODE3
@@ -239,4 +256,128 @@ void demo_rainbows() {
     enc_read_buf((byte *) 0, led_buffer_size);
 }
 
-#endif
+/**
+ *
+ * CURRENT PROBLEM:
+ *
+ * Write 0x0d (
+ *     MACON1_MARXEN
+ *     |MACON1_TXPAUS
+ *     |MACON1_RXPAUS
+ * ) to MACON1
+ * Stays 0x0d until write 0x33 (
+ *     MACON3_PADCFG0
+ *     |MACON3_TXCRCEN
+ *     |MACON3_FRMLNEN
+ *     |MACON3_FULDPX
+ * ) to MACON3
+ * and then it changes to 0x13 (
+ *     Reserved: maintan as 0
+ *     |MACON1_PASSALL
+ *     |MACON1_MARXEN
+ * )
+ * which doesn't make sense!
+ *
+ * Another version:
+ *
+ * Write 0x0d (
+ *     MACON1_MARXEN
+ *     |MACON1_TXPAUS
+ *     |MACON1_RXPAUS
+ * ) to MACON1
+ * Stays 0x0d until write 0x01 (
+ *     MACON3_FULDPX
+ * ) to MACON3
+ * and then it changes to 0x1
+ *
+ * Another version:
+ *
+ * Write 0x0d (
+ *     MACON1_MARXEN
+ *     |MACON1_TXPAUS
+ *     |MACON1_RXPAUS
+ * ) to MACON1
+ * Stays 0x0d until write 0x02 (
+ *     MACON3_FRMLNEN
+ * ) to MACON3
+ * and then it changes to 0x2
+ *
+ * Another version:
+ *
+ * Write 0x0d (
+ *     MACON1_MARXEN
+ *     |MACON1_TXPAUS
+ *     |MACON1_RXPAUS
+ * ) to MACON1
+ * Stays 0x0d until write 0x10 (
+ *     MACON3_TXCRCEN
+ * ) to MACON3
+ * and then it changes to 0x10
+
+
+ */
+
+void demo_mac_interference() {
+    byte reg;
+
+    /* enable MAC receive, TX/RX Pause = 0x0d */
+    reg = 0x00;
+    reg |= MACON1_MARXEN; // Enable MAC to recieve frames
+    reg |= MACON1_TXPAUS; // Allow IEEE defined flow control to function
+    reg |= MACON1_RXPAUS; // Allow IEEE defined flow control to function
+    enc_write_reg(MACON1, reg);
+
+    enc_reg_print("MACON1 should be 0x0d", MACON1);
+    enc_reg_print("MACON3", MACON3);
+
+    reg = 0x00;
+    // All short frames will be zero padded to 60 bytes and a valid CRC
+    // will then be appended
+    // reg |= MACON3_PADCFG0;
+    // MAC will append a valid CRC to all frames transmitted regardless of
+    // PADCFG bits. TXCRCEN must be set if the PADCFG bits specify that a
+    // valid CRC will be appended
+    // reg |= MACON3_TXCRCEN;
+    // The type/length field of transmitted and received frames will be
+    // checked. If it represents a length, the frame size will be compared
+    // and mismatches will be reported in the transmit/receive status vector.
+    // reg |= MACON3_FRMLNEN;
+    //
+    reg |= MACON3_FULDPX;
+    enc_write_reg(MACON3, reg);
+
+    enc_reg_print("MACON1 should be 0x0d", MACON1);
+    enc_reg_print("MACON3", MACON3);
+}
+
+
+/**
+ * Receive ethernet packets from the ENC
+ */
+void demo_receive() {
+    enc_hw_init();
+
+    // Enable interrupt on receive packet
+
+    // Set MAC Addr
+    byte mac_addr[] = {0x69, 0x69, 0x69, 0x69, 0x69, 0x69};
+    enc_set_mac_addr(mac_addr);
+
+    do {
+        enc_hw_enable();
+
+        if(digitalRead(INT_PIN) == HIGH){
+            Serial.println("int pint high as fuck");
+        } else {
+            Serial.println("int pin low");
+        }
+
+        enc_regs_debug();
+        enc_hw_disable();
+        delay(100);
+        do {
+        } while (!Serial.available());
+        while (Serial.available()){Serial.read();delay(1);}
+    } while (1);
+
+}

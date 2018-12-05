@@ -7,31 +7,70 @@
 
 #define waitspi() while(!(SPSR&(1<<SPIF)))
 
+inline void _changeSPIMode(byte mode) {
+    delayMicroseconds(MODE_CHANGE_DELAY_MS);
+    SPCR = (SPCR & (~SPI_MODE3)) | mode;
+    delayMicroseconds(MODE_CHANGE_DELAY_MS);
+}
+
 inline void _beginTransaction(SPISettings spiSettings) {
 
     // digitalWrite(MOSI, LOW);
     // digitalWrite(SCK, LOW);
     digitalWrite(CS_PIN, LOW);
 
-    delayMicroseconds(CS_DELAY);
+    delayMicroseconds(CS_SETUP_MS);
     #ifdef USE_SPI_LIBRARY
         SPI.beginTransaction(spiSettings);
     #else
         noInterrupts();
+        // _changeSPIMode(SPI_MODE);
     #endif
 }
 
-inline byte _spiTransfer(byte data) {
+// inline byte _spiTransfer(byte data) {
+//     byte response;
+//     #ifdef USE_SPI_LIBRARY
+//         response = SPI.transfer(data);
+//     #else
+//         // Clear SPI mode
+//         _changeSPIMode(SPI_MODE);
+//         SPDR = data;
+//         waitspi();
+//         response = SPDR;
+//         _changeSPIMode(SPI_MODE);
+//         digitalWrite(MOSI, LOW);
+//     #endif
+//     delayMicroseconds(WORD_DELAY);
+//     return response;
+// }
+
+inline byte _spiRead() {
     byte response;
     #ifdef USE_SPI_LIBRARY
-        response = SPI.transfer(data);
+        response = SPI.transfer(0);
     #else
-        SPDR = data;
+        // _changeSPIMode(SPI_MODE);
+        SPDR = 0;
         waitspi();
         response = SPDR;
+        // digitalWrite(MOSI, LOW);
     #endif
     delayMicroseconds(WORD_DELAY);
     return response;
+}
+
+inline void _spiWrite(byte data) {
+    #ifdef USE_SPI_LIBRARY
+        SPI.transfer(data);
+    #else
+        // _changeSPIMode(SPI_MODE);
+        SPDR = data;
+        waitspi();
+        // _changeSPIMode(SPI_MODE);
+        // digitalWrite(MOSI, LOW);
+    #endif
+    delayMicroseconds(WORD_DELAY);
 }
 
 inline void _endTransaction() {
@@ -41,7 +80,8 @@ inline void _endTransaction() {
         interrupts();
     #endif
     digitalWrite(CS_PIN, HIGH);
-    delayMicroseconds(CS_DELAY);
+    // digitalWrite(MOSI, LOW);
+    delayMicroseconds(CS_DISABLE_MS);
 }
 
 /**
@@ -54,7 +94,7 @@ inline byte _first_byte(byte op, byte arg) {
 }
 
 long last_print = 0;
-#define PRINT_DELAY 100
+#define PRINT_DELAY 200
 
 void enc_op_write(byte op, byte arg, byte data) {
     // Perform a SPI operation on the ENC28J60 which has a single byte data argument
@@ -72,35 +112,59 @@ void enc_op_write(byte op, byte arg, byte data) {
         return;
     }
 
-    #ifdef REPEAT_BREAKPOINTS
-        do {
-    #endif
+    if(
+        (arg & SPRD_MASK) & (
+            (ENC28J60_BIT_FIELD_SET == op)
+            || (ENC28J60_BIT_FIELD_CLR == op)
+        )
+    ) {
+        Serial.print("ERR: op");
+        Serial.print(op);
+        Serial.println(" not available for MAC or MII registers");
+        return;
+    }
+
+    do {
 
     _beginTransaction(spiSettings);
-    _spiTransfer(_first_byte(op, arg));
-    _spiTransfer(data);
+    _spiWrite(_first_byte(op, arg));
+    _spiWrite(data);
+    if(arg & SPRD_MASK) {
+        // extra hold time for MAC/MII commands
+        delayMicroseconds(CS_HOLD_M_MS);
+    } else {
+        delayMicroseconds(CS_HOLD_MS);
+    }
     _endTransaction();
 
-    #ifdef REPEAT_BREAKPOINTS
-            if ((millis() - last_print) > PRINT_DELAY) {
-                Serial.print("SPCR is 0x");
-                Serial.print(SPCR, HEX);
-                if(ENC28J60_WRITE_CTRL_REG == op) {
-                    Serial.print(" | writing 0x");
-                }
-                else if(ENC28J60_BIT_FIELD_SET == op) {
-                    Serial.print("setting mask 0x");
-                }
-                else if(ENC28J60_BIT_FIELD_CLR == op) {
-                    Serial.print("clearing mask 0x");
-                }
-                Serial.print(data, HEX);
-                Serial.print(" in reg with ");
-                Serial.println(_first_byte(op, arg), HEX);
-                last_print = millis();
-            }
-        } while (!Serial.available());
-        while (Serial.available()){Serial.read();delay(1);}
+    #if REPEAT_BREAKPOINTS
+    if ((millis() - last_print) > PRINT_DELAY) {
+    #else
+    if (DEBUG_OP_RW) {
+    #endif
+        Serial.print("SPCR is 0x");
+        Serial.print(SPCR, HEX);
+        if(ENC28J60_WRITE_CTRL_REG == op) {
+            Serial.print(" | writing 0x");
+        }
+        else if(ENC28J60_BIT_FIELD_SET == op) {
+            Serial.print(" | setting mask 0x");
+        }
+        else if(ENC28J60_BIT_FIELD_CLR == op) {
+            Serial.print(" | clearing mask 0x");
+        }
+        Serial.print(data, HEX);
+        Serial.print(" in arg ");
+        Serial.print(arg & ADDR_MASK, HEX);
+        Serial.print(" with ");
+        Serial.println(op, HEX);
+        last_print = millis();
+    }
+    #if REPEAT_BREAKPOINTS
+    } while (!Serial.available());
+    while (Serial.available()){Serial.read();delay(1);}
+    #else
+    } while (0);
     #endif
 
 }
@@ -120,30 +184,36 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
 
     byte result = 0x00;
 
-    #ifdef REPEAT_BREAKPOINTS
-        do {
-    #endif
+    do {
 
     _beginTransaction(spiSettings);
-    _spiTransfer(_first_byte(op, arg));
+    _spiWrite(_first_byte(op, arg));
     // handle dummy byte for certain RCRs
-    if(arg & SPRD_MASK) _spiTransfer(0);
+    if(arg & SPRD_MASK) _spiRead();
     // clock in response
-    result = _spiTransfer(0);
+    result = _spiRead();
     _endTransaction();
 
-    #ifdef REPEAT_BREAKPOINTS
-            if ((millis() - last_print) > PRINT_DELAY) {
-                Serial.print("SPCR is 0x");
-                Serial.print(SPCR, HEX);
-                Serial.print(" | reading 0x");
-                Serial.print(result, HEX);
-                Serial.print(" from reg with ");
-                Serial.println(_first_byte(op, arg), HEX);
-                last_print = millis();
-            }
-        } while (!Serial.available());
-        while (Serial.available()){Serial.read();delay(1);}
+    #if REPEAT_BREAKPOINTS
+    if ((millis() - last_print) > PRINT_DELAY) {
+    #else
+    if (DEBUG_OP_RW) {
+    #endif
+        Serial.print("SPCR is 0x");
+        Serial.print(SPCR, HEX);
+        Serial.print(" | reading 0x");
+        Serial.print(result, HEX);
+        Serial.print(" from arg ");
+        Serial.print(arg & ADDR_MASK, HEX);
+        Serial.print(" with ");
+        Serial.println(op, HEX);
+        last_print = millis();
+    }
+    #if REPEAT_BREAKPOINTS
+    } while (!Serial.available());
+    while (Serial.available()){Serial.read();delay(1);}
+    #else
+    } while (0);
     #endif
 
     return result;
@@ -152,12 +222,39 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
 void enc_soft_reset() {
     // Send a soft reset command and wait
     Serial.println("RESET");
+
+    // Errata 19.
+    enc_op_write(ENC28J60_BIT_FIELD_CLR, ECON2, ECON2_PWRSV);
+    delayMicroseconds(600);
+
     _beginTransaction(spiSettings);
-    _spiTransfer(ENC28J60_SOFT_RESET);
+    _spiWrite(ENC28J60_SOFT_RESET);
     delayMicroseconds(RESET_DELAY);
     _endTransaction();
     /* Fix for errata #2: CLKRDY set early */
     delayMicroseconds(RESET_DELAY);
+
+    byte reg;
+
+    do {
+        reg = enc_read_reg(ESTAT);
+
+        if(!(reg & ESTAT_CLKRDY)) {
+        Serial.println();
+            enc_reg_print("WARN: ESTAT_CLKRDY should be set after reset", ESTAT);
+            delay(1000);
+            break;
+        } else if (reg & 0x04) {
+            enc_reg_print("WARN: ESTAT_RXBUSY should be clear after reset", ESTAT);
+            delay(1000);
+            break;
+        } else {
+            Serial.println("RESET succesful");
+            break;
+        }
+        delay(100);
+    } while(1);
+
 }
 
 /**
@@ -176,11 +273,17 @@ void enc_bank_sel(byte reg) {
     // Serial.print("ECON1: 0x");
     // Serial.println(econ1, HEX);
 
-    if (ECON1_BSEL_MASK & (econ1 & bsel)) {
-        Serial.print("changing bank from ");
-        Serial.print(econ1 & ECON1_BSEL_MASK, HEX);
-        Serial.print(" to ");
-        Serial.println(bsel & ECON1_BSEL_MASK, HEX);
+    if ((ECON1_BSEL_MASK & (econ1 ^ bsel))) {
+        if (DEBUG_OP_RW) {
+            Serial.print("SPCR is 0x");
+            Serial.print(SPCR, HEX);
+            Serial.print(" | changing bank from ");
+            Serial.print(econ1 & ECON1_BSEL_MASK, HEX);
+            Serial.print(" to ");
+            Serial.println(bsel & ECON1_BSEL_MASK, HEX);
+        }
+    } else {
+        return;
     }
 
     // bits which need to be set in ECON1.bsel
@@ -200,6 +303,13 @@ void enc_bank_sel(byte reg) {
     if( clear_bits ) {
         enc_op_write(ENC28J60_BIT_FIELD_CLR, ECON1, clear_bits);
     }
+
+    econ1 = enc_op_read(ENC28J60_READ_CTRL_REG, ECON1);
+
+    if (ECON1_BSEL_MASK & (econ1 ^ bsel)) {
+        Serial.println("ERR: Bank select failed!");
+    }
+
 }
 
 /**
@@ -262,19 +372,19 @@ void enc_bit_clr(byte reg, byte bits) {
  */
 void enc_write_buf(byte * data, uint8_t len) {
     _beginTransaction(spiSettings);
-    _spiTransfer(ENC28J60_WRITE_BUF_MEM);
+    _spiWrite(ENC28J60_WRITE_BUF_MEM);
     for(uint8_t i=0; i<len; i++){
-        _spiTransfer(data[i]);
+        _spiWrite(data[i]);
     }
     _endTransaction();
 }
 
 void enc_read_buf(byte * data, uint8_t len) {
     _beginTransaction(spiSettings);
-    _spiTransfer(ENC28J60_READ_BUF_MEM);
+    _spiWrite(ENC28J60_READ_BUF_MEM);
     byte result;
     for(uint8_t i=0; i<len; i++){
-        result = _spiTransfer(0x00);
+        result = _spiRead();
         if(data) {data[i] = result;}
     }
     _endTransaction();
@@ -346,6 +456,7 @@ void spi_init() {
 
 /**
  * Hardware initialization, based off linux drivers,
+
  */
 int enc_hw_init() {
     byte reg;
@@ -371,35 +482,48 @@ int enc_hw_init() {
     // reg |= ECON2_PWRSV;
     enc_write_reg(ECON2, reg);
 
-    /* set receive buffer start + end */
+    /* 6.1: set receive buffer start + end */
     enc_write_regw(ERXSTL, RXSTART_INIT);
     enc_write_regw(ERXNDL, RXSTOP_INIT);
-    enc_write_regw(ERXRDPTL, _erxrdpt_workaround(RXSTART_INIT, ERXSTL, ERXNDL));
-    /* set transmit buffer start + end */
+    enc_write_regw(ERXRDPTL, _erxrdpt_workaround(RXSTART_INIT, ERXSTL, RXSTOP_INIT));
+    /* 6.2: set transmit buffer start + end */
     enc_write_regw(ETXSTL, TXSTART_INIT);
     enc_write_regw(ETXNDL, TXSTOP_INIT);
 
-    /* default eth RX filter mode: (unicast OR broadcast) AND crc valid = 0xA1*/
+    /* 6.3: default eth RX filter mode: (unicast OR broadcast) AND crc valid = 0xA1*/
     reg = 0x00;
-    reg |= ERXFCON_UCEN;
-    reg |= ERXFCON_CRCEN;
-    reg |= ERXFCON_BCEN;
+    reg |= ERXFCON_UCEN; // ( unicast
+    reg |= ERXFCON_BCEN; //   OR broadcast )
+    reg |= ERXFCON_CRCEN; // AND crc valid
     enc_write_reg(ERXFCON, reg);
 
 	/* enable MAC receive, TX/RX Pause = 0x0d */
     reg = 0x00;
-    reg |= MACON1_MARXEN;
-    reg |= MACON1_TXPAUS;
-    reg |= MACON1_RXPAUS;
+    reg |= MACON1_MARXEN; // Enable MAC to recieve frames
+    reg |= MACON1_TXPAUS; // Allow IEEE defined flow control to function
+    reg |= MACON1_RXPAUS; // Allow IEEE defined flow control to function
 	enc_write_reg(MACON1, reg);
 
-    enc_reg_print("MACON1", MACON1);
+    enc_reg_print("MACON1 should be 0x0d", MACON1);
+    enc_reg_print("MACON3", MACON3);
 
 	/* enable automatic padding and CRC operations */
 	if (FULL_DUPLEX) {
-		enc_write_reg(MACON3,
-				    MACON3_PADCFG0 | MACON3_TXCRCEN |
-				    MACON3_FRMLNEN | MACON3_FULDPX);
+        reg = 0x00;
+        // All short frames will be zero padded to 60 bytes and a valid CRC
+        // will then be appended
+        reg |= MACON3_PADCFG0;
+        // MAC will append a valid CRC to all frames transmitted regardless of
+        // PADCFG bits. TXCRCEN must be set if the PADCFG bits specify that a
+        // valid CRC will be appended
+        reg |= MACON3_TXCRCEN;
+        // The type/length field of transmitted and received frames will be
+        // checked. If it represents a length, the frame size will be compared
+        // and mismatches will be reported in the transmit/receive status vector.
+        reg |= MACON3_FRMLNEN;
+        //
+        reg |= MACON3_FULDPX;
+		enc_write_reg(MACON3, reg);
 		/* set inter-frame gap (non-back-to-back) */
 		enc_write_reg(MAIPGL, 0x12);
 		/* set inter-frame gap (back-to-back) */
@@ -408,12 +532,16 @@ int enc_hw_init() {
 		enc_write_reg(MACON3,
 				    MACON3_PADCFG0 | MACON3_TXCRCEN |
 				    MACON3_FRMLNEN);
-		enc_write_reg(MACON4, 1 << 6);	/* DEFER bit */
+		enc_write_reg(MACON4, MACON4_DEFER);	/* DEFER bit */
 		/* set inter-frame gap (non-back-to-back) */
 		enc_write_regw(MAIPGL, 0x0C12);
 		/* set inter-frame gap (back-to-back) */
 		enc_write_reg(MABBIPG, 0x12);
 	}
+
+    enc_reg_print("MACON1 should be 0x0d", MACON1);
+    enc_reg_print("MACON3", MACON3);
+
 	/*
 	 * MACLCON1 (default)
 	 * MACLCON2 (default)
@@ -457,9 +585,9 @@ void enc_hw_disable() {
 
 void enc_reg_print(String name, byte reg) {
     byte result;
+    result = enc_read_reg(reg);
     Serial.print(name);
     Serial.print(": 0x");
-    result = enc_read_reg(reg);
     if (result<0x10) {Serial.print(0);}
     Serial.println(result, HEX);
 }
