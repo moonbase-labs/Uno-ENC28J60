@@ -57,8 +57,8 @@ void loop() {
     // demo_bitflip();
     // demo_buf_write();
     // demo_rainbows();
-    demo_mac_interference();
-    // demo_receive();
+    // demo_mac_interference();
+    demo_receive();
 
     do {delay(10);} while (!Serial.available());
     while (Serial.available()){Serial.read();delay(1);}

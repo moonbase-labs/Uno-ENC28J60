@@ -219,6 +219,17 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
     return result;
 }
 
+int poll_ready(byte reg, byte mask, byte val) {
+    long poll_start = millis();
+    while((enc_read_reg(reg) & mask) != val) {
+        if( (millis() - poll_start) > POLL_TIMEOUT ) {
+            return 1;
+        }
+        delay(1);
+    }
+    return 0;
+}
+
 void enc_soft_reset() {
     // Send a soft reset command and wait
     Serial.println("RESET");
@@ -234,27 +245,14 @@ void enc_soft_reset() {
     /* Fix for errata #2: CLKRDY set early */
     delayMicroseconds(RESET_DELAY);
 
-    byte reg;
 
-    do {
-        reg = enc_read_reg(ESTAT);
-
-        if(!(reg & ESTAT_CLKRDY)) {
-        Serial.println();
-            enc_reg_print("WARN: ESTAT_CLKRDY should be set after reset", ESTAT);
-            delay(1000);
-            break;
-        } else if (reg & 0x04) {
-            enc_reg_print("WARN: ESTAT_RXBUSY should be clear after reset", ESTAT);
-            delay(1000);
-            break;
-        } else {
-            Serial.println("RESET succesful");
-            break;
-        }
-        delay(100);
-    } while(1);
-
+    if (poll_ready(ESTAT, ESTAT_RXBUSY, 0)) {
+        Serial.println("WARN: ESTAT_RXBUSY should be clear after reset");
+    } else if (poll_ready(ESTAT, ESTAT_CLKRDY, ESTAT_CLKRDY)) {
+        Serial.println("WARN: ESTAT_CLKRDY should be set after reset");
+    } else {
+        Serial.println("RESET succesful");
+    }
 }
 
 /**
@@ -398,17 +396,6 @@ void enc_set_mac_addr(byte * mac_addr) {
     enc_write_reg(MAADR2, mac_addr[3]);
     enc_write_reg(MAADR1, mac_addr[4]);
     enc_write_reg(MAADR0, mac_addr[5]);
-}
-
-int poll_ready(byte reg, byte mask, byte val) {
-    long poll_start = millis();
-    while((enc_read_reg(reg) & mask) != val) {
-        if( (millis() - poll_start) > POLL_TIMEOUT ) {
-            return 1;
-        }
-        delay(1);
-    }
-    return 0;
 }
 
 /*
