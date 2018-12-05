@@ -116,24 +116,6 @@ void demo_write_reg_2() {
     enc_write_reg(ERXNDH, 0x1f);
 }
 
-void demo_bitflip() {
-    byte result;
-
-    Serial.print("View the ECON1 register (should be initialized to 0x00): 0x");
-    result = enc_read_reg(ECON1);
-    Serial.println(result, HEX);
-    Serial.print("Set the ECON1_RXEN bit field (Enable Recieve)");
-    enc_bit_set(ECON1, ECON1_RXEN);
-    Serial.print("View the ECON1 register (should be set to 0x40): 0x");
-    result = enc_read_reg(ECON1);
-    Serial.println(result, HEX);
-    Serial.print("clear the ECON1_RXEN bit field (Enable Recieve)");
-    enc_bit_clr(ECON1, ECON1_RXEN);
-    Serial.print("View the ECON1 register (should be set to 0x00): 0x");
-    result = enc_read_reg(ECON1);
-    Serial.println(result, HEX);
-}
-
 void demo_buf_write() {
     static byte testdata[] = {
         0x00, 0x00, 0x00, 0x00, // START Frame

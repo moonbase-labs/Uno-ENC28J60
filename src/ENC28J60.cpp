@@ -1,26 +1,60 @@
 #include "ENC28J60.h"
 
-inline byte _first_byte(byte op, byte arg) {
-    // assembe first byte in operation from opcode and argument
-    return op | (arg & ADDR_MASK);
-}
+/**
+ * SPI stuff
+ * could have its own source file
+ */
+
+#define waitspi() while(!(SPSR&(1<<SPIF)))
 
 inline void _beginTransaction(SPISettings spiSettings) {
+
+    // digitalWrite(MOSI, LOW);
+    // digitalWrite(SCK, LOW);
     digitalWrite(CS_PIN, LOW);
+
     delayMicroseconds(CS_DELAY);
-    SPI.beginTransaction(spiSettings);
+    #ifdef USE_SPI_LIBRARY
+        SPI.beginTransaction(spiSettings);
+    #else
+        noInterrupts();
+    #endif
 }
 
 inline byte _spiTransfer(byte data) {
-    byte response = SPI.transfer(data);
+    byte response;
+    #ifdef USE_SPI_LIBRARY
+        response = SPI.transfer(data);
+    #else
+        SPDR = data;
+        waitspi();
+        response = SPDR;
+    #endif
     delayMicroseconds(WORD_DELAY);
     return response;
 }
 
 inline void _endTransaction() {
-    SPI.endTransaction();
+    #if USE_SPI_LIBRARY
+        SPI.endTransaction();
+    #else
+        interrupts();
+    #endif
     digitalWrite(CS_PIN, HIGH);
+    delayMicroseconds(CS_DELAY);
 }
+
+/**
+ * ENC specific stuff
+ */
+
+inline byte _first_byte(byte op, byte arg) {
+    // assembe first byte in operation from opcode and argument
+    return op | (arg & ADDR_MASK);
+}
+
+long last_print = 0;
+#define PRINT_DELAY 100
 
 void enc_op_write(byte op, byte arg, byte data) {
     // Perform a SPI operation on the ENC28J60 which has a single byte data argument
@@ -39,7 +73,6 @@ void enc_op_write(byte op, byte arg, byte data) {
     }
 
     #ifdef REPEAT_BREAKPOINTS
-        bool printed = false;
         do {
     #endif
 
@@ -49,9 +82,11 @@ void enc_op_write(byte op, byte arg, byte data) {
     _endTransaction();
 
     #ifdef REPEAT_BREAKPOINTS
-            if (!printed) {
+            if ((millis() - last_print) > PRINT_DELAY) {
+                Serial.print("SPCR is 0x");
+                Serial.print(SPCR, HEX);
                 if(ENC28J60_WRITE_CTRL_REG == op) {
-                    Serial.print("writing 0x");
+                    Serial.print(" | writing 0x");
                 }
                 else if(ENC28J60_BIT_FIELD_SET == op) {
                     Serial.print("setting mask 0x");
@@ -62,9 +97,8 @@ void enc_op_write(byte op, byte arg, byte data) {
                 Serial.print(data, HEX);
                 Serial.print(" in reg with ");
                 Serial.println(_first_byte(op, arg), HEX);
-                printed = true;
+                last_print = millis();
             }
-            delay(1);
         } while (!Serial.available());
         while (Serial.available()){Serial.read();delay(1);}
     #endif
@@ -87,7 +121,6 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
     byte result = 0x00;
 
     #ifdef REPEAT_BREAKPOINTS
-        bool printed = false;
         do {
     #endif
 
@@ -100,14 +133,15 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
     _endTransaction();
 
     #ifdef REPEAT_BREAKPOINTS
-            if (!printed) {
-                Serial.print("reading 0x");
+            if ((millis() - last_print) > PRINT_DELAY) {
+                Serial.print("SPCR is 0x");
+                Serial.print(SPCR, HEX);
+                Serial.print(" | reading 0x");
                 Serial.print(result, HEX);
                 Serial.print(" from reg with ");
                 Serial.println(_first_byte(op, arg), HEX);
-                printed = true;
+                last_print = millis();
             }
-            delay(1);
         } while (!Serial.available());
         while (Serial.available()){Serial.read();delay(1);}
     #endif
@@ -304,10 +338,28 @@ uint16_t _erxrdpt_workaround(uint16_t erxrdpt, uint16_t start, uint16_t end) {
 }
 
 /**
+ * Initialize SPI
+ */
+void spi_init() {
+
+}
+
+/**
  * Hardware initialization, based off linux drivers,
  */
 int enc_hw_init() {
     byte reg;
+
+    /*
+	 * Check the RevID.
+	 * If it's 0x00 or 0xFF probably the enc28j60 is not mounted or
+	 * damaged
+	 */
+	reg = enc_read_reg(EREVID);
+	if (reg == 0x00 || reg == 0xff) {
+		return 0;
+	}
+
     /* reset the chip */
     enc_soft_reset();
     /* Clear ECON1 */
@@ -326,16 +378,6 @@ int enc_hw_init() {
     /* set transmit buffer start + end */
     enc_write_regw(ETXSTL, TXSTART_INIT);
     enc_write_regw(ETXNDL, TXSTOP_INIT);
-
-    /*
-	 * Check the RevID.
-	 * If it's 0x00 or 0xFF probably the enc28j60 is not mounted or
-	 * damaged
-	 */
-	reg = enc_read_reg(EREVID);
-	if (reg == 0x00 || reg == 0xff) {
-		return 0;
-	}
 
     /* default eth RX filter mode: (unicast OR broadcast) AND crc valid = 0xA1*/
     reg = 0x00;

@@ -330,7 +330,9 @@
 #define INT_PIN 9
 #define POLL_TIMEOUT 20
 
-#define REPEAT_BREAKPOINTS
+
+#define REPEAT_BREAKPOINTS 1
+// #define USE_SPI_LIBRARY 1
 
 #define FULL_DUPLEX 0
 
