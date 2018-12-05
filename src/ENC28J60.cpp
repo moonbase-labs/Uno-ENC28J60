@@ -581,30 +581,40 @@ void enc_peek_buf(int len) {
     enc_write_regw(ERDPTL, old_erdpt);
 }
 
-inline void _enc_dump_rx_status() {
-    rsv_msb status;
-    status.val = enc_read_buf_w();
-
-    Serial.print("status:");
-    Serial.print("-> rxvlan: 0x"); Serial.println(status.rxvlan, HEX);
-    Serial.print("-> unkn: 0x"); Serial.println(status.unkn, HEX);
-    Serial.print("-> rxpcf: 0x"); Serial.println(status.rxpcf, HEX);
-    Serial.print("-> rxcf: 0x"); Serial.println(status.rxcf, HEX);
-    Serial.print("-> drib: 0x"); Serial.println(status.drib, HEX);
-    Serial.print("-> rxbcpkt: 0x"); Serial.println(status.rxbcpkt, HEX);
-    Serial.print("-> rxmckpt: 0x"); Serial.println(status.rxmckpt, HEX);
-    Serial.print("-> rxok: 0x"); Serial.println(status.rxok, HEX);
-    Serial.print("-> e_range: 0x"); Serial.println(status.e_range, HEX);
-    Serial.print("-> e_lenchk: 0x"); Serial.println(status.e_lenchk, HEX);
-    Serial.print("-> e_crc: 0x"); Serial.println(status.e_crc, HEX);
-    Serial.print("-> ceps: 0x"); Serial.println(status.ceps, HEX);
-    Serial.print("-> longdrop: 0x"); Serial.println(status.longdrop, HEX);
+inline void _enc_print_rxstat(uint16_t rxstat) {
+    Serial.print("-> RSV_RXLONGEVDROPEV: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXLONGEVDROPEV), HEX);
+    Serial.print("-> RSV_CARRIEREV: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_CARRIEREV), HEX);
+    Serial.print("-> RSV_CRCERROR: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_CRCERROR), HEX);
+    Serial.print("-> RSV_LENCHECKERR: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_LENCHECKERR), HEX);
+    Serial.print("-> RSV_LENOUTOFRANGE: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_LENOUTOFRANGE), HEX);
+    Serial.print("-> RSV_RXOK: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXOK), HEX);
+    Serial.print("-> RSV_RXMULTICAST: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXMULTICAST), HEX);
+    Serial.print("-> RSV_RXBROADCAST: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXBROADCAST), HEX);
+    Serial.print("-> RSV_DRIBBLENIBBLE: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_DRIBBLENIBBLE), HEX);
+    Serial.print("-> RSV_RXCONTROLFRAME: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXCONTROLFRAME), HEX);
+    Serial.print("-> RSV_RXPAUSEFRAME: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXPAUSEFRAME), HEX);
+    Serial.print("-> RSV_RXUNKNOWNOPCODE: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXUNKNOWNOPCODE), HEX);
+    Serial.print("-> RSV_RXTYPEVLAN: 0x");
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXTYPEVLAN), HEX);
 }
 
 /**
- * Temporary MAC address storage on the stack
+ * Temporary MAC address storage
  */
 byte * mac = (byte *)malloc(MAC_BYTES*sizeof(byte));
+
 
 inline void _print_mac() {
     for(int i=0; i<MAC_BYTES; i++){
@@ -635,27 +645,43 @@ inline void _enc_dump_pkt(int rbcnt) {
 }
 
 /**
+ * Temporary Recieve Status Vector storage
+ * (including Next Packet Pointer because that's how Linux does it)
+ */
+byte * rsv = malloc(RSV_SIZE * sizeof(byte));
+
+/**
  * Dumps the NPP, Receive status vector and packet located at ERDPT, seeks back
  */
 void enc_peek_npp_rsv_pkt() {
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
-
-    uint16_t rbcnt;
+    uint16_t rbcnt, rxstat;
 
     Serial.print("old erdpt: ");
     Serial.println(old_erdpt, HEX);
 
-    /* next packet pointer, recieved bytes count, recieved ok */
-    g_next_packet = enc_read_buf_w();
+    enc_read_buf(rsv, RSV_SIZE);
+
+    g_next_packet = rsv[1];
+    g_next_packet <<= 8;
+    g_next_packet |= rsv[0];
+
+    rbcnt = rsv[3];
+    rbcnt <<= 8;
+    rbcnt |= rsv[2];
+
+    rxstat = rsv[5];
+    rxstat <<= 8;
+    rxstat |= rsv[4];
 
     Serial.print("next packet: 0x");
     Serial.println(g_next_packet, HEX);
 
-    rbcnt = enc_read_buf_w();
     Serial.print("rbcnt: ");
     Serial.println(rbcnt);
 
-    _enc_dump_rx_status();
+    Serial.println("rxstat: ");
+    _enc_print_rxstat(rxstat);
 
     Serial.println("packet: ");
     _enc_dump_pkt(rbcnt);
