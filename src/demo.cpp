@@ -376,9 +376,10 @@ void demo_receive() {
         enc_regs_debug();
         enc_hw_disable();
 
+        Serial.println("buffer: ");
         enc_dump_buf(100);
 
-        enc_dump_npp_rsv();
+        enc_dump_npp_rsv_pkt();
 
         delay(100);
         do {

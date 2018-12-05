@@ -365,4 +365,30 @@ void enc_hw_enable();
 void enc_hw_disable();
 void enc_dump_buf(int len);
 
+/**
+ * Most significant 16 bits of Recieve Status Vector,
+ * Not including the Recieved Byte Count Field
+ */
+typedef union {
+    uint16_t val;
+    struct {
+        byte zero : 1;
+        byte rxvlan :1;
+        byte unkn :1;
+        byte rxpcf :1;
+        byte rxcf :1;
+        byte drib :1;
+        byte rxbcpkt :1;
+        byte rxmckpt :1;
+        byte rxok :1;
+        byte e_range :1;
+        byte e_lenchk :1;
+        byte e_crc :1;
+        byte reserved19 :1;
+        byte ceps :1;
+        byte reserved17 :1;
+        byte longdrop :1;
+    };
+} rsv_msb;
+
 #endif

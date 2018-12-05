@@ -305,6 +305,31 @@ void enc_read_buf(byte * data, uint8_t len) {
     _endTransaction();
 }
 
+/**
+ * Read single byte from buffer
+ */
+byte enc_read_buf_b() {
+    byte result;
+    _beginTransaction(spiSettings);
+    _spiWrite(ENC28J60_READ_BUF_MEM);
+    result = _spiRead();
+    _endTransaction();
+    return result;
+}
+
+/**
+ * Read single 16b word from buffer (LSB first)
+ */
+uint16_t enc_read_buf_w16() {
+    union {uint16_t val; struct {byte lsb, msb;};} word;
+    _beginTransaction(spiSettings);
+    _spiWrite(ENC28J60_READ_BUF_MEM);
+    word.lsb = _spiRead();
+    word.msb = _spiRead();
+    _endTransaction();
+    return word.val;
+}
+
 void enc_set_mac_addr(byte * mac_addr) {
     /* NOTE: MAC address in ENC28J60 is byte-backward */
     enc_write_reg(MAADR5, mac_addr[0]);
@@ -349,6 +374,23 @@ uint16_t _erxrdpt_workaround(uint16_t erxrdpt, uint16_t start, uint16_t end) {
 	} else {
 		return ((erxrdpt - 1) | 1);
 	}
+}
+
+/**
+ * Number of auto-incrementing buffer reads between `from` and `to` assuming
+ *   - erdpt wraps from erxnd to erxst.
+ *   - erxst and erxnd never deviate from RXSTART_INIT and RXSTOP_INIT
+ */
+uint16_t _buffer_distance(uint16_t from, uint16_t to) {
+    if(int(from) < RXSTART_INIT || from > RXSTOP_INIT) {
+        Serial.println("ERR: bad _buffer_distance arg: from");
+        return 0;
+    }
+
+    if(int(to) < RXSTART_INIT || to > RXSTOP_INIT) {
+        Serial.println("ERR: bad _buffer_distance arg: from");
+        return 0;
+    }
 }
 
 /**
@@ -505,43 +547,45 @@ void enc_regs_print(String name, byte reg, int n_regs) {
 void enc_dump_buf(int len) {
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
     byte buf_byte;
-    Serial.println("buffer: ");
     for( int i=0; i<len; i++){
         enc_read_buf(&buf_byte, 1);
         if(buf_byte<0x10) Serial.print(0);
         Serial.print(buf_byte, HEX);
     }
-
+    Serial.println();
     enc_write_regw(ERDPTL, old_erdpt);
 }
 
 /**
- * Dumps the NPP and Receive status vector located at ERDPT
+ * Dumps the NPP and Receive status vector located at ERDPT and maybe a packet!
  */
 
-byte * rsv_buf = (byte *) malloc(RSV_LEN * sizeof(byte) + 1);
-
-void enc_dump_npp_rsv() {
-    struct { uint8_t lsb; uint8_t msb; } npp;
+void enc_dump_npp_rsv_pkt() {
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
+
+    rsv_msb status;
 
     Serial.print("old_erdpt: ");
     Serial.println(old_erdpt, HEX);
 
-    enc_read_buf((byte *)(&npp), 2);
-    Serial.print("npp: 0x");
-    Serial.print(npp.msb, HEX);
-    Serial.println(npp.lsb, HEX);
+    /* next packet pointer, recieved bytes count, recieved ok */
+    uint16_t npp = enc_read_buf_w16();
 
-    enc_read_buf((byte *)(rsv_buf), RSV_LEN);
-    for( int i=0; i<RSV_LEN; i++){
-        Serial.print("rsv ");
-        if(i<0x10) Serial.print(0);
-        Serial.print(i, HEX);
-        Serial.print(" ");
-        if(rsv_buf[i]<0x10) Serial.print(0);
-        Serial.println(rsv_buf[i], HEX);
-    }
+    // enc_read_buf((byte *)(&npp), 2);
+    Serial.print("npp: 0x");
+    Serial.println(npp, HEX);
+
+    uint16_t rbcnt = enc_read_buf_w16();
+
+    status.val = enc_read_buf_w16();
+
+    Serial.print("status: 0x");
+    Serial.println(status.val, HEX);
+    Serial.print("rbcnt: ");
+    Serial.println(rbcnt);
+
+    Serial.println("next packet: ");
+    enc_dump_buf(rbcnt);
 
     enc_write_regw(ERDPTL, old_erdpt);
 }

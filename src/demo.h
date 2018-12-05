@@ -9,7 +9,7 @@ void demo_buf_write();
 void demo_rainbows();
 void demo_mac_interference();
 void demo_receive();
-void enc_dump_npp_rsv();
+void enc_dump_npp_rsv_pkt();
 
 #define N_LEDS 60
 
