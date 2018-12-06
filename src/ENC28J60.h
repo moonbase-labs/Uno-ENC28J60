@@ -345,7 +345,7 @@
 
 #define REPEAT_BREAKPOINTS 0
 #define DEBUG_ETH 0
-#define DEBUG_ETH_BASIC 0
+#define DEBUG_ETH_BASIC 1
 #define DEBUG_OP_RW 0
 
 

@@ -32,9 +32,9 @@ void enc_op_write(byte op, byte arg, byte data) {
         (ENC28J60_BIT_FIELD_SET != op) &
         (ENC28J60_BIT_FIELD_CLR != op)
     ) {
-        Serial.print("ERR: op");
+        Serial.print(F("ERR: op"));
         Serial.print(op);
-        Serial.println(" should not expect reply, and require data argument");
+        Serial.println(F(" should not expect reply, and require data argument"));
         g_enc_err = ENC_ERR_OP;
         return;
     }
@@ -45,9 +45,9 @@ void enc_op_write(byte op, byte arg, byte data) {
             || (ENC28J60_BIT_FIELD_CLR == op)
         )
     ) {
-        Serial.print("ERR: op");
+        Serial.print(F("ERR: op"));
         Serial.print(op);
-        Serial.println(" not available for MAC or MII registers");
+        Serial.println(F(" not available for MAC or MII registers"));
         g_enc_err = ENC_ERR_OP;
         return;
     }
@@ -71,21 +71,21 @@ void enc_op_write(byte op, byte arg, byte data) {
         if (DEBUG_OP_RW)
         #endif
         {
-            Serial.print("SPCR is 0x");
+            Serial.print(F("SPCR is 0x"));
             Serial.print(SPCR, HEX);
             if(ENC28J60_WRITE_CTRL_REG == op) {
-                Serial.print(" | writing 0x");
+                Serial.print(F(" | writing 0x"));
             }
             else if(ENC28J60_BIT_FIELD_SET == op) {
-                Serial.print(" | setting mask 0x");
+                Serial.print(F(" | setting mask 0x"));
             }
             else if(ENC28J60_BIT_FIELD_CLR == op) {
-                Serial.print(" | clearing mask 0x");
+                Serial.print(F(" | clearing mask 0x"));
             }
             Serial.print(data, HEX);
-            Serial.print(" in arg ");
+            Serial.print(F(" in arg "));
             Serial.print(arg & ADDR_MASK, HEX);
-            Serial.print(" with ");
+            Serial.print(F(" with "));
             Serial.println(op, HEX);
             SOMETIMES_PRINT_END;
         }
@@ -106,9 +106,9 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
         (ENC28J60_READ_CTRL_REG != op) &
         (ENC28J60_READ_BUF_MEM != op)
     ) {
-        Serial.print("ERR: op");
+        Serial.print(F("ERR: op"));
         Serial.print(op);
-        Serial.println(" should expect reply and require data argument");
+        Serial.println(F(" should expect reply and require data argument"));
         g_enc_err = ENC_ERR_OP;
         return 0;
     }
@@ -130,13 +130,13 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
         if (DEBUG_OP_RW)
         #endif
         {
-            Serial.print("SPCR is 0x");
+            Serial.print(F("SPCR is 0x"));
             Serial.print(SPCR, HEX);
-            Serial.print(" | reading 0x");
+            Serial.print(F(" | reading 0x"));
             Serial.print(result, HEX);
-            Serial.print(" from arg ");
+            Serial.print(F(" from arg "));
             Serial.print(arg & ADDR_MASK, HEX);
-            Serial.print(" with ");
+            Serial.print(F(" with "));
             Serial.println(op, HEX);
             SOMETIMES_PRINT_END;
         }
@@ -163,7 +163,7 @@ int poll_ready(byte reg, byte mask, byte val) {
 
 void enc_soft_reset() {
     // Send a soft reset command and wait
-    Serial.println("RESET");
+    Serial.println(F("RESET"));
 
     // Errata 19.
     enc_op_write(ENC28J60_BIT_FIELD_CLR, ECON2, ECON2_PWRSV);
@@ -178,11 +178,11 @@ void enc_soft_reset() {
 
 
     if (poll_ready(ESTAT, ESTAT_RXBUSY, 0)) {
-        Serial.println("WARN: ESTAT_RXBUSY should be clear after reset");
+        Serial.println(F("WARN: ESTAT_RXBUSY should be clear after reset"));
     } else if (poll_ready(ESTAT, ESTAT_CLKRDY, ESTAT_CLKRDY)) {
-        Serial.println("WARN: ESTAT_CLKRDY should be set after reset");
+        Serial.println(F("WARN: ESTAT_CLKRDY should be set after reset"));
     } else {
-        Serial.println("RESET succesful");
+        Serial.println(F("RESET succesful"));
     }
 }
 
@@ -199,16 +199,16 @@ void enc_bank_sel(byte reg) {
 
     byte bsel = (reg & BANK_MASK) >> 5;
     byte econ1 = enc_op_read(ENC28J60_READ_CTRL_REG, ECON1);
-    // Serial.print("ECON1: 0x");
+    // Serial.print(F("ECON1: 0x"));
     // Serial.println(econ1, HEX);
 
     if ((ECON1_BSEL_MASK & (econ1 ^ bsel))) {
         if (DEBUG_OP_RW) {
-            Serial.print("SPCR is 0x");
+            Serial.print(F("SPCR is 0x"));
             Serial.print(SPCR, HEX);
-            Serial.print(" | changing bank from ");
+            Serial.print(F(" | changing bank from "));
             Serial.print(econ1 & ECON1_BSEL_MASK, HEX);
-            Serial.print(" to ");
+            Serial.print(F(" to "));
             Serial.println(bsel & ECON1_BSEL_MASK, HEX);
         }
     } else {
@@ -217,7 +217,7 @@ void enc_bank_sel(byte reg) {
 
     // bits which need to be set in ECON1.bsel
     byte set_bits = ECON1_BSEL_MASK & (~econ1 & bsel);
-    // Serial.print("set bits: 0x");
+    // Serial.print(F("set bits: 0x"));
     // Serial.println(set_bits, HEX);
 
     if( set_bits ) {
@@ -227,7 +227,7 @@ void enc_bank_sel(byte reg) {
 
     // bits which need to be cleared in ECON1.bsel
     byte clear_bits = ECON1_BSEL_MASK & (econ1 & ~bsel);
-    // Serial.print("clear bits: 0x");
+    // Serial.print(F("clear bits: 0x"));
     // Serial.println(clear_bits, HEX);
     if( clear_bits ) {
         enc_op_write(ENC28J60_BIT_FIELD_CLR, ECON1, clear_bits);
@@ -236,7 +236,7 @@ void enc_bank_sel(byte reg) {
     econ1 = enc_op_read(ENC28J60_READ_CTRL_REG, ECON1);
 
     if (ECON1_BSEL_MASK & (econ1 ^ bsel)) {
-        Serial.println("ERR: Bank select failed!");
+        Serial.println(F("ERR: Bank select failed!"));
         g_enc_err = ENC_ERR_BANK;
         return;
     }
@@ -394,27 +394,27 @@ uint16_t _erxrdpt_workaround(uint16_t erxrdpt, uint16_t start, uint16_t end) {
 
 int _bounded_distance(int from, int to, int bst, int bnd) {
     if (bst > bnd) {
-        Serial.println("ERR: bad _buffer_distance arg: bst > bnd");
+        Serial.println(F("ERR: bad _buffer_distance arg: bst > bnd"));
         g_enc_err = ENC_ERR_ARG;
         return 0;
     }
     if(from < bst) {
-        Serial.println("ERR: bad _buffer_distance arg: from < bst");
+        Serial.println(F("ERR: bad _buffer_distance arg: from < bst"));
         g_enc_err = ENC_ERR_ARG;
         return 0;
     }
     if(from > bnd) {
-        Serial.println("ERR: bad _buffer_distance arg: from > bnd");
+        Serial.println(F("ERR: bad _buffer_distance arg: from > bnd"));
         g_enc_err = ENC_ERR_ARG;
         return 0;
     }
     if(to < bst) {
-        Serial.println("ERR: bad _buffer_distance arg: to < bst");
+        Serial.println(F("ERR: bad _buffer_distance arg: to < bst"));
         g_enc_err = ENC_ERR_ARG;
         return 0;
     }
     if(to > bnd) {
-        Serial.println("ERR: bad _buffer_distance arg: to > bnd");
+        Serial.println(F("ERR: bad _buffer_distance arg: to > bnd"));
         g_enc_err = ENC_ERR_ARG;
         return 0;
     }
@@ -427,17 +427,17 @@ int _bounded_distance(int from, int to, int bst, int bnd) {
 
 int _bounded_sum(int start, int offset, int bst, int bnd) {
     if (bst > bnd) {
-        Serial.println("ERR: bad _bounded_sum arg: bst > bnd");
+        Serial.println(F("ERR: bad _bounded_sum arg: bst > bnd"));
         g_enc_err = ENC_ERR_ARG;
         return 0;
     }
     if(start < bst) {
-        Serial.println("ERR: bad _bounded_sum arg: start < bst");
+        Serial.println(F("ERR: bad _bounded_sum arg: start < bst"));
         g_enc_err = ENC_ERR_ARG;
         return 0;
     }
     if(start > bnd) {
-        Serial.println("ERR: bad _bounded_sum arg: start > bnd");
+        Serial.println(F("ERR: bad _bounded_sum arg: start > bnd"));
         g_enc_err = ENC_ERR_ARG;
         return 0;
     }
@@ -592,7 +592,7 @@ void enc_reg_print(String name, byte reg) {
     byte result;
     result = enc_read_reg(reg);
     Serial.print(name);
-    Serial.print(": 0x");
+    Serial.print(F(": 0x"));
     if (result<0x10) {Serial.print(0);}
     Serial.println(result, HEX);
 }
@@ -600,7 +600,7 @@ void enc_reg_print(String name, byte reg) {
 void enc_regs_print(String name, byte reg, int n_regs) {
     byte result;
     Serial.print(name);
-    Serial.print(": 0x");
+    Serial.print(F(": 0x"));
     for(int i=n_regs-1; i>=0; i--) {
         result = enc_read_reg(reg + (byte)(i));
         if (result<0x10) {Serial.print(0);}
@@ -611,7 +611,7 @@ void enc_regs_print(String name, byte reg, int n_regs) {
 
 void enc_peek_buf(int offset, int len) {
     if(len > MAX_FRAMELEN) {
-        Serial.print("ERR: enc_peek_buf too long: ");
+        Serial.print(F("ERR: enc_peek_buf too long: "));
         Serial.println(len);
         g_enc_err = ENC_ERR_ARG;
         return;
@@ -619,7 +619,7 @@ void enc_peek_buf(int offset, int len) {
 
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
     enc_write_regw(ERDPTL, _buffer_sum(old_erdpt, offset));
-    // Serial.println("g_enc_eth_frame_buf: 0x");
+    // Serial.println(F("g_enc_eth_frame_buf: 0x"));
     // Serial.println((int)(g_enc_eth_frame_buf), HEX);
     enc_read_buf(g_enc_eth_frame_buf, len);
     if( DEBUG_ETH ) {
@@ -633,31 +633,31 @@ void enc_peek_buf(int offset, int len) {
 }
 
 void _enc_print_rxstat(uint16_t rxstat) {
-    Serial.print("-> RSV_RXLONGEVDROPEV: 0x");
+    Serial.print(F("-> RSV_RXLONGEVDROPEV: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_RXLONGEVDROPEV), HEX);
-    Serial.print("-> RSV_CARRIEREV: 0x");
+    Serial.print(F("-> RSV_CARRIEREV: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_CARRIEREV), HEX);
-    Serial.print("-> RSV_CRCERROR: 0x");
+    Serial.print(F("-> RSV_CRCERROR: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_CRCERROR), HEX);
-    Serial.print("-> RSV_LENCHECKERR: 0x");
+    Serial.print(F("-> RSV_LENCHECKERR: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_LENCHECKERR), HEX);
-    Serial.print("-> RSV_LENOUTOFRANGE: 0x");
+    Serial.print(F("-> RSV_LENOUTOFRANGE: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_LENOUTOFRANGE), HEX);
-    Serial.print("-> RSV_RXOK: 0x");
+    Serial.print(F("-> RSV_RXOK: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_RXOK), HEX);
-    Serial.print("-> RSV_RXMULTICAST: 0x");
+    Serial.print(F("-> RSV_RXMULTICAST: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_RXMULTICAST), HEX);
-    Serial.print("-> RSV_RXBROADCAST: 0x");
+    Serial.print(F("-> RSV_RXBROADCAST: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_RXBROADCAST), HEX);
-    Serial.print("-> RSV_DRIBBLENIBBLE: 0x");
+    Serial.print(F("-> RSV_DRIBBLENIBBLE: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_DRIBBLENIBBLE), HEX);
-    Serial.print("-> RSV_RXCONTROLFRAME: 0x");
+    Serial.print(F("-> RSV_RXCONTROLFRAME: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_RXCONTROLFRAME), HEX);
-    Serial.print("-> RSV_RXPAUSEFRAME: 0x");
+    Serial.print(F("-> RSV_RXPAUSEFRAME: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_RXPAUSEFRAME), HEX);
-    Serial.print("-> RSV_RXUNKNOWNOPCODE: 0x");
+    Serial.print(F("-> RSV_RXUNKNOWNOPCODE: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_RXUNKNOWNOPCODE), HEX);
-    Serial.print("-> RSV_RXTYPEVLAN: 0x");
+    Serial.print(F("-> RSV_RXTYPEVLAN: 0x"));
     Serial.println(RSV_GETBIT(rxstat, RSV_RXTYPEVLAN), HEX);
 }
 
@@ -669,7 +669,7 @@ byte * mac = (byte *)malloc(MAC_BYTES*sizeof(byte));
 
 inline void _print_mac() {
     for(int i=0; i<MAC_BYTES; i++){
-        if(i>0) Serial.print(":");
+        if(i>0) Serial.print(F(":"));
         if(mac[i]<0x10) Serial.print(0);
         Serial.print(mac[i], HEX);
     }
@@ -681,17 +681,17 @@ void _enc_dump_pkt(int bcnt) {
     bcnt -= MAC_BYTES;
     uint16_t typ_len = enc_read_buf_w();
     if( DEBUG_ETH ) {
-        Serial.print("-> DA: ");
+        Serial.print(F("-> DA: "));
         _print_mac();
     }
     enc_read_buf(mac, MAC_BYTES);
     bcnt -= MAC_BYTES;
     if( DEBUG_ETH ) {
-        Serial.print("-> SA: ");
+        Serial.print(F("-> SA: "));
         _print_mac();
-        Serial.print("-> TYP/LEN: ");
+        Serial.print(F("-> TYP/LEN: "));
         Serial.println(typ_len, HEX);
-        Serial.print("-> (bcnt remaining): ");
+        Serial.print(F("-> (bcnt remaining): "));
         Serial.println(bcnt);
     }
     g_enc_series = enc_read_buf_b();
@@ -734,40 +734,40 @@ void _enc_refresh_rsv_globals() {
 void enc_peek_npp_rsv_pkt() {
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
 
-    Serial.print("old erdpt: ");
+    Serial.print(F("old erdpt: "));
     Serial.println(old_erdpt, HEX);
 
     _enc_refresh_rsv_globals();
 
-    Serial.print("next packet: 0x");
+    Serial.print(F("next packet: 0x"));
     Serial.println(g_enc_npp, HEX);
 
-    Serial.print("g_enc_rxbcnt: ");
+    Serial.print(F("g_enc_rxbcnt: "));
     Serial.println(g_enc_rxbcnt);
 
-    Serial.println("rxstat: ");
+    Serial.println(F("rxstat: "));
     _enc_print_rxstat(g_enc_rxstat);
 
-    Serial.println("packet: ");
+    Serial.println(F("packet: "));
     _enc_dump_pkt(g_enc_rxbcnt);
 
     enc_write_regw(ERDPTL, old_erdpt);
 }
 
 void enc_regs_debug() {
-    Serial.println("\nHwRevID:\n------");
+    Serial.println(F("\nHwRevID:\n------"));
     enc_reg_print("\nEREVID", EREVID);
-    Serial.println("Cntrl:\n-----");
+    Serial.println(F("Cntrl:\n-----"));
     enc_reg_print("ECON1", ECON1);
     enc_reg_print("ECON2", ECON2);
     enc_reg_print("ESTAT", ESTAT);
     enc_reg_print("EIR", EIR);
     enc_reg_print("EIE", EIE);
-    Serial.println("\nMAC:\n-----");
+    Serial.println(F("\nMAC:\n-----"));
     enc_reg_print("MACON1", MACON1);
     enc_reg_print("MACON3", MACON3);
     enc_reg_print("MACON4", MACON4);
-    Serial.println("\nRX:\n-----");
+    Serial.println(F("\nRX:\n-----"));
     enc_regs_print("ERXSTH:ERXSTL", ERXSTL, 2);
     enc_regs_print("ERXNDH:ERXNDL", ERXNDL, 2);
     enc_regs_print("ERXWRPTH:ERXWRPTL", ERXWRPTL, 2);
@@ -776,7 +776,7 @@ void enc_regs_debug() {
     enc_reg_print("EPKTCNT", EPKTCNT);
     enc_regs_print("MAMXFLH:MAMXFLL", MAMXFLL, 2);
 
-    Serial.println("\nTX:\n-----");
+    Serial.println(F("\nTX:\n-----"));
     enc_regs_print("ETXSTH:ETXSTL", ETXSTL, 2);
     enc_regs_print("ETXNDH:ETXNDL", ETXNDL, 2);
 }

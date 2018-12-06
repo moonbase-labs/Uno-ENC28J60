@@ -34,10 +34,10 @@ void demo_read_reg() {
     for (uint8_t i=0; i<ARRAY_LEN(allregs); i++) {
         reg_addr = allregs[i];
         result = enc_read_reg(reg_addr);
-        Serial.print("read register 0x");
+        Serial.print(F("read register 0x"));
         if(reg_addr < 0x10) {Serial.print(0);}
         Serial.print(reg_addr, HEX);
-        Serial.print(", response: 0x");
+        Serial.print(F(", response: 0x"));
         if(result < 0x10) {Serial.print(0);}
         Serial.println(result, HEX);
     }
@@ -66,42 +66,42 @@ void demo_read_reg() {
 void demo_bitflip() {
     byte result;
 
-    Serial.print("View the ECON1 register (should be initialized to 0x00): 0x");
+    Serial.print(F("View the ECON1 register (should be initialized to 0x00): 0x"));
     result = enc_read_reg(ECON1);
     Serial.println(result, HEX);
-    Serial.print("Set the ECON1_RXEN bit field (Enable Recieve)");
+    Serial.print(F("Set the ECON1_RXEN bit field (Enable Recieve)"));
     enc_bit_set(ECON1, ECON1_RXEN);
-    Serial.print("View the ECON1 register (should be set to 0x04): 0x");
+    Serial.print(F("View the ECON1 register (should be set to 0x04): 0x"));
     result = enc_read_reg(ECON1);
     Serial.println(result, HEX);
-    Serial.print("clear the ECON1_RXEN bit field (Enable Recieve)");
+    Serial.print(F("clear the ECON1_RXEN bit field (Enable Recieve)"));
     enc_bit_clr(ECON1, ECON1_RXEN);
-    Serial.print("View the ECON1 register (should be set to 0x00): 0x");
+    Serial.print(F("View the ECON1 register (should be set to 0x00): 0x"));
     result = enc_read_reg(ECON1);
     Serial.println(result, HEX);
 }
 
 void demo_write_reg() {
     byte result;
-    Serial.print("View the ERXSTL:ERXSTH registers (should be initialized to 0xfa, 0x05): 0x");
+    Serial.print(F("View the ERXSTL:ERXSTH registers (should be initialized to 0xfa, 0x05): 0x"));
     result = enc_read_reg(ERXSTL);
     Serial.print(result, HEX);
-    Serial.print(", 0x");
+    Serial.print(F(", 0x"));
     // result = enc_read_reg(ERXSTH);
     Serial.println(result, HEX);
 
-    Serial.println("set the ERXSTL:ERXSTH registers to (0xaa, 0x05):");
+    Serial.println(F("set the ERXSTL:ERXSTH registers to (0xaa, 0x05):"));
     enc_write_reg(ERXSTL, 0xaa);
     // enc_write_reg(ERXSTH, 0x05);
 
-    Serial.print("View the ERXSTL:ERXSTH registers (should now be set to 0xaa, 0x05): 0x");
+    Serial.print(F("View the ERXSTL:ERXSTH registers (should now be set to 0xaa, 0x05): 0x"));
     result = enc_read_reg(ERXSTL);
     Serial.print(result, HEX);
-    Serial.print(", 0x");
+    Serial.print(F(", 0x"));
     // result = enc_read_reg(ERXSTH);
     Serial.println(result, HEX);
 
-    Serial.println("return the ERXSTL:ERXSTH registers to (0xfa, 0x05):");
+    Serial.println(F("return the ERXSTL:ERXSTH registers to (0xfa, 0x05):"));
     enc_write_reg(ERXSTL, 0xfa);
     // enc_write_reg(ERXSTH, 0x05);
 
@@ -111,25 +111,25 @@ void demo_write_reg() {
 
 void demo_write_reg_2() {
     byte result;
-    Serial.print("View the ERXNDL:ERXNDH registers (should be initialized to 0xff, 0x1f): 0x");
+    Serial.print(F("View the ERXNDL:ERXNDH registers (should be initialized to 0xff, 0x1f): 0x"));
     result = enc_read_reg(ERXNDL);
     Serial.print(result, HEX);
-    Serial.print(", 0x");
+    Serial.print(F(", 0x"));
     result = enc_read_reg(ERXNDH);
     Serial.println(result, HEX);
 
-    Serial.println("set the ERXNDL:ERXNDH registers to (0xff, 0x07):");
+    Serial.println(F("set the ERXNDL:ERXNDH registers to (0xff, 0x07):"));
     enc_write_reg(ERXNDL, 0xff);
     enc_write_reg(ERXNDH, 0x07);
 
-    Serial.print("View the ERXNDL:ERXNDH registers (should now be set to 0xff, 0x07): 0x");
+    Serial.print(F("View the ERXNDL:ERXNDH registers (should now be set to 0xff, 0x07): 0x"));
     result = enc_read_reg(ERXNDL);
     Serial.print(result, HEX);
-    Serial.print(", 0x");
+    Serial.print(F(", 0x"));
     result = enc_read_reg(ERXNDH);
     Serial.println(result, HEX);
 
-    Serial.println("return the ERXNDL:ERXNDH registers to (0xff, 0x1f):");
+    Serial.println(F("return the ERXNDL:ERXNDH registers to (0xff, 0x1f):"));
     enc_write_reg(ERXNDL, 0xff);
     enc_write_reg(ERXNDH, 0x1f);
 }
@@ -145,16 +145,16 @@ void demo_buf_write() {
     byte * results = (byte *) malloc(sizeof(testdata));
     byte result;
 
-    Serial.println("Set buf write pointer (EWRPTL:EWRPTH) byte (0x02:0x03) to 0x0000");
+    Serial.println(F("Set buf write pointer (EWRPTL:EWRPTH) byte (0x02:0x03) to 0x0000"));
     enc_write_reg(EWRPTL, 0x00);
     enc_write_reg(EWRPTH, 0x00);
-    Serial.println("Write bytes to buffer");
+    Serial.println(F("Write bytes to buffer"));
 
     enc_write_buf(testdata, ARRAY_LEN(testdata));
-    Serial.println("Set buf read pointer (ERDPTL:ERDPTH) byte (0x00:0x01) to 0x0000");
+    Serial.println(F("Set buf read pointer (ERDPTL:ERDPTH) byte (0x00:0x01) to 0x0000"));
     enc_write_reg(ERDPTL, 0x00);
     enc_write_reg(ERDPTH, 0x00);
-    Serial.print("read bytes from buffer: 0x");
+    Serial.print(F("read bytes from buffer: 0x"));
 
     enc_read_buf(results, ARRAY_LEN(testdata));
 
@@ -234,25 +234,25 @@ void demo_rainbows() {
         led_data[N_LEDS*4 + i] = 0xff;
     }
 
-    // Serial.print("LED buffer(");
+    // Serial.print(F("LED buffer("));
     // Serial.print(led_buffer_size);
-    // Serial.print("): 0x");
+    // Serial.print(F("): 0x"));
     // for( int i=0; i<led_buffer_size; i++){
     //     if( led_data[i] < 0x10){ Serial.print(0); }
     //     Serial.print(led_data[i], HEX);
     // }
     // Serial.println();
 
-    // Serial.println("Set buf write pointer (EWRPTL:EWRPTH) byte (0x02:0x03) to 0x0000");
+    // Serial.println(F("Set buf write pointer (EWRPTL:EWRPTH) byte (0x02:0x03) to 0x0000"));
     enc_write_reg(EWRPTL, 0x00);
     enc_write_reg(EWRPTH, 0x00);
-    // Serial.println("Write bytes to buffer");
+    // Serial.println(F("Write bytes to buffer"));
 
     enc_write_buf(led_data, led_buffer_size);
-    // Serial.println("Set buf read pointer (ERDPTL:ERDPTH) byte (0x00:0x01) to 0x0000");
+    // Serial.println(F("Set buf read pointer (ERDPTL:ERDPTH) byte (0x00:0x01) to 0x0000"));
     enc_write_reg(ERDPTL, 0x00);
     enc_write_reg(ERDPTH, 0x00);
-    // Serial.println("read bytes from buffer to LED");
+    // Serial.println(F("read bytes from buffer to LED"));
 
     enc_read_buf((byte *) 0, led_buffer_size);
 }
@@ -376,12 +376,12 @@ void demo_receive() {
 
         if(digitalRead(INT_PIN) == HIGH){
             if (SOMETIMES_PRINT_COND & DEBUG_ETH) {
-                Serial.println("int pint high as fuck");
+                Serial.println(F("int pint high as fuck"));
                 SOMETIMES_PRINT_END;
             }
         } else {
             if( DEBUG_ETH ) {
-                Serial.println("int pin low");
+                Serial.println(F("int pin low"));
             }
         }
 
@@ -391,20 +391,20 @@ void demo_receive() {
         byte epktcnt = enc_read_reg(EPKTCNT);
 
         if( DEBUG_ETH_BASIC & SOMETIMES_PRINT_COND) {
-            Serial.print("epktcnt: ");
+            Serial.print(F("epktcnt: "));
             Serial.println(epktcnt, HEX);
             SOMETIMES_PRINT_END;
         }
 
         if(!epktcnt) {
             if (SOMETIMES_PRINT_COND & DEBUG_ETH) {
-                Serial.println("No packets yet");
+                Serial.println(F("No packets yet"));
                 SOMETIMES_PRINT_END;
             }
             continue;
         }
 
-        // Serial.println("buffer: ");
+        // Serial.println(F("buffer: "));
         // enc_peek_buf(100);
         // enc_peek_npp_rsv_pkt();
 
@@ -413,14 +413,14 @@ void demo_receive() {
         dump_packet = true;
 
         if( DEBUG_ETH_BASIC & SOMETIMES_PRINT_COND) {
-            Serial.print("old erdpt: ");
+            Serial.print(F("old erdpt: "));
             Serial.println(old_erdpt, HEX);
             SOMETIMES_PRINT_END;
         }
 
         if(g_enc_err) {
             enc_regs_debug();
-            Serial.print("ERROR");
+            Serial.print(F("ERROR"));
             Serial.println(g_enc_err);
             g_enc_err = ENC_NO_ERR;
             consume_packet();
@@ -432,15 +432,15 @@ void demo_receive() {
         /* TODO: move this to separate validation function? */
 
         if( DEBUG_ETH ) {
-            Serial.print("next packet: 0x");
+            Serial.print(F("next packet: 0x"));
             Serial.println(g_enc_npp, HEX);
-            Serial.print("rxbcnt: ");
+            Serial.print(F("rxbcnt: "));
             Serial.println(g_enc_rxbcnt);
         }
 
 
         if(dump_packet && !RSV_GETBIT(g_enc_rxstat, RSV_RXOK)) {
-            Serial.println("RX not ok, rxstat:");
+            Serial.println(F("RX not ok, rxstat:"));
             _enc_print_rxstat(g_enc_rxstat);
             enc_regs_debug();
             // TODO: when should packet be consumed?
@@ -448,11 +448,11 @@ void demo_receive() {
         }
 
         if(dump_packet && (g_enc_rxbcnt > MAX_FRAMELEN)) {
-            Serial.print("Length not ok, ");
+            Serial.print(F("Length not ok, "));
             Serial.print(g_enc_rxbcnt);
-            Serial.print(" > MAX_FRAMELEN: ");
+            Serial.print(F(" > MAX_FRAMELEN: "));
             Serial.println(MAX_FRAMELEN);
-            Serial.println("rxstat:");
+            Serial.println(F("rxstat:"));
             _enc_print_rxstat(g_enc_rxstat);
             // TODO: when should packet be consumed?
 
@@ -461,35 +461,35 @@ void demo_receive() {
         }
 
         if(dump_packet && (g_enc_rxbcnt < ETH_HEADER_BYTES)) {
-            Serial.print("Length not ok, ");
+            Serial.print(F("Length not ok, "));
             Serial.print(g_enc_rxbcnt);
-            Serial.print(" < ETH_HEADER_BYTES: ");
+            Serial.print(F(" < ETH_HEADER_BYTES: "));
             Serial.println(ETH_HEADER_BYTES);
-            Serial.println("rxstat:");
+            Serial.println(F("rxstat:"));
             _enc_print_rxstat(g_enc_rxstat);
             // TODO: when should packet be consumed?
             dump_packet = false;
         }
 
         if(dump_packet && ((int)(g_enc_npp) < RXSTART_INIT)) {
-            Serial.print("Next Packet Pointer out of bounds: 0x");
+            Serial.print(F("Next Packet Pointer out of bounds: 0x"));
             Serial.print(g_enc_npp, HEX);
-            Serial.print(" < RXSTART_INIT: 0x");
+            Serial.print(F(" < RXSTART_INIT: 0x"));
             Serial.println(RXSTART_INIT, HEX);
             dump_packet = false;
         }
 
         if(dump_packet && ((int)(g_enc_npp) > RXSTOP_INIT)) {
-            Serial.print("Next Packet Pointer out of bounds: 0x");
+            Serial.print(F("Next Packet Pointer out of bounds: 0x"));
             Serial.print(g_enc_npp, HEX);
-            Serial.print(" > RXSTOP_INIT: 0x");
+            Serial.print(F(" > RXSTOP_INIT: 0x"));
             Serial.println(RXSTOP_INIT, HEX);
             dump_packet = false;
         }
 
         if(g_enc_err) {
             enc_regs_debug();
-            Serial.print("ERROR");
+            Serial.print(F("ERROR"));
             Serial.println(g_enc_err);
             g_enc_err = ENC_NO_ERR;
             consume_packet();
@@ -500,7 +500,7 @@ void demo_receive() {
             // TODO: only dump what we care about
 
 
-            // if( DEBUG_ETH ) Serial.println("packet: ");
+            // if( DEBUG_ETH ) Serial.println(F("packet: "));
             // _enc_dump_pkt(g_enc_rxbcnt);
             // _enc_print_rxstat(g_enc_rxstat);
             // enc_peek_buf(ETH_HEADER_BYTES, g_enc_rxbcnt-ETH_HEADER_BYTES);
@@ -512,7 +512,7 @@ void demo_receive() {
             g_enc_series = enc_read_buf_b();
 
             if(DEBUG_ETH_BASIC) {
-                Serial.print("series: ");
+                Serial.print(F("series: "));
                 Serial.println(g_enc_series, HEX);
             }
 

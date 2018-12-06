@@ -7,15 +7,15 @@
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("SETUP");
+    Serial.println(F("SETUP"));
 
     spi_init();
 
-    Serial.print("SPI_MODE is 0x");
+    Serial.print(F("SPI_MODE is 0x"));
     Serial.println(SPI_MODE, HEX);
-    Serial.print("SPCR is 0x");
+    Serial.print(F("SPCR is 0x"));
     Serial.println(SPCR, HEX);
-    Serial.print("SPSR is 0x");
+    Serial.print(F("SPSR is 0x"));
     Serial.println(SPSR, HEX);
 
     // Reset chip
