@@ -449,7 +449,13 @@ void demo_receive() {
 
 
         if(dump_packet && !RSV_GETBIT(g_enc_rxstat, RSV_RXOK)) {
-            Serial.println(F("RX not ok, rxstat:"));
+            Serial.println(F("RX not ok, "));
+            if(RSV_GETBIT(g_enc_rxstat, RSV_RXCONTROLFRAME)) {
+                // don't care about control frames yet
+                consume_packet();
+                return;
+            }
+            Serial.println(F("rxstat:"));
             _enc_print_rxstat(g_enc_rxstat);
             enc_regs_debug();
             // TODO: when should packet be consumed?
@@ -463,6 +469,8 @@ void demo_receive() {
             Serial.println(MAX_FRAMELEN);
             Serial.println(F("rxstat:"));
             _enc_print_rxstat(g_enc_rxstat);
+            Serial.println(F("header: "));
+            _enc_dump_pkt(ETH_HEADER_BYTES);
             // TODO: when should packet be consumed?
 
             consume_packet();
@@ -531,6 +539,15 @@ void demo_receive() {
         } else {
             enc_write_regw(ERDPTL, old_erdpt);
         }
+
+        // print summary
+        Serial.print(F("SER:"));
+        if(g_enc_series<0x1f) Serial.print(0);
+        Serial.print(g_enc_series,HEX);
+        Serial.print(F(" CNT:"));
+        if(epktcnt<0x1f) Serial.print(0);
+        Serial.print(epktcnt,HEX);
+        Serial.println();
 
     } while (1);
 

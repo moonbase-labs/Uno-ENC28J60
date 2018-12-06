@@ -281,7 +281,7 @@
 #define RSV_CRCERROR		20
 #define RSV_LENCHECKERR		21
 #define RSV_LENOUTOFRANGE	22
-#define RSV_RXOK		23
+#define RSV_RXOK		    23
 #define RSV_RXMULTICAST		24
 #define RSV_RXBROADCAST		25
 #define RSV_DRIBBLENIBBLE	26
@@ -289,6 +289,7 @@
 #define RSV_RXPAUSEFRAME	28
 #define RSV_RXUNKNOWNOPCODE	29
 #define RSV_RXTYPEVLAN		30
+#define RSV_ZERO		    31
 
 #define RSV_SIZE		6
 #define RSV_BITMASK(x)		(1 << ((x) - 16))
@@ -345,7 +346,7 @@
 
 #define REPEAT_BREAKPOINTS 0
 #define DEBUG_ETH 0
-#define DEBUG_ETH_BASIC 1
+#define DEBUG_ETH_BASIC 0
 #define DEBUG_OP_RW 0
 
 

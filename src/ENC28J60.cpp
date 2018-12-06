@@ -659,32 +659,34 @@ void enc_peek_buf(int offset, int len) {
 }
 
 void _enc_print_rxstat(uint16_t rxstat) {
-    Serial.print(F("-> RSV_RXLONGEVDROPEV: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_RXLONGEVDROPEV), HEX);
-    Serial.print(F("-> RSV_CARRIEREV: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_CARRIEREV), HEX);
-    Serial.print(F("-> RSV_CRCERROR: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_CRCERROR), HEX);
-    Serial.print(F("-> RSV_LENCHECKERR: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_LENCHECKERR), HEX);
-    Serial.print(F("-> RSV_LENOUTOFRANGE: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_LENOUTOFRANGE), HEX);
-    Serial.print(F("-> RSV_RXOK: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_RXOK), HEX);
-    Serial.print(F("-> RSV_RXMULTICAST: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_RXMULTICAST), HEX);
-    Serial.print(F("-> RSV_RXBROADCAST: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_RXBROADCAST), HEX);
-    Serial.print(F("-> RSV_DRIBBLENIBBLE: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_DRIBBLENIBBLE), HEX);
-    Serial.print(F("-> RSV_RXCONTROLFRAME: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_RXCONTROLFRAME), HEX);
-    Serial.print(F("-> RSV_RXPAUSEFRAME: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_RXPAUSEFRAME), HEX);
-    Serial.print(F("-> RSV_RXUNKNOWNOPCODE: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_RXUNKNOWNOPCODE), HEX);
-    Serial.print(F("-> RSV_RXTYPEVLAN: 0x"));
-    Serial.println(RSV_GETBIT(rxstat, RSV_RXTYPEVLAN), HEX);
+    Serial.print(F("-> RSV_RXLONGEVDROPEV: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXLONGEVDROPEV));
+    Serial.print(F("-> RSV_CARRIEREV: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_CARRIEREV));
+    Serial.print(F("-> RSV_CRCERROR: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_CRCERROR));
+    Serial.print(F("-> RSV_LENCHECKERR: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_LENCHECKERR));
+    Serial.print(F("-> RSV_LENOUTOFRANGE: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_LENOUTOFRANGE));
+    Serial.print(F("-> RSV_RXOK: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXOK));
+    Serial.print(F("-> RSV_RXMULTICAST: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXMULTICAST));
+    Serial.print(F("-> RSV_RXBROADCAST: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXBROADCAST));
+    Serial.print(F("-> RSV_DRIBBLENIBBLE: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_DRIBBLENIBBLE));
+    Serial.print(F("-> RSV_RXCONTROLFRAME: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXCONTROLFRAME));
+    Serial.print(F("-> RSV_RXPAUSEFRAME: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXPAUSEFRAME));
+    Serial.print(F("-> RSV_RXUNKNOWNOPCODE: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXUNKNOWNOPCODE));
+    Serial.print(F("-> RSV_RXTYPEVLAN: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_RXTYPEVLAN));
+    Serial.print(F("-> RSV_ZERO: "));
+    Serial.println(RSV_GETBIT(rxstat, RSV_ZERO));
 }
 
 /**
