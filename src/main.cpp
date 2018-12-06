@@ -18,6 +18,9 @@ void setup() {
     Serial.print(F("SPSR is 0x"));
     Serial.println(SPSR, HEX);
 
+    // Serial.print(F("g_enc_eth_frame_buf: 0x"));
+    // Serial.println((int)(g_enc_eth_frame_buf), HEX);
+
     // Reset chip
     // enc_soft_reset();
 

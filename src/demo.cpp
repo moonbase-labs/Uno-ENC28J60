@@ -372,6 +372,15 @@ void demo_receive() {
     // while (Serial.available()){Serial.read();delay(1);}
 
     do {
+        if(g_enc_err) {
+            enc_regs_debug();
+            Serial.print(F("ERROR"));
+            Serial.println(g_enc_err);
+            g_enc_err = ENC_NO_ERR;
+            consume_packet();
+            return;
+        }
+
         enc_hw_enable();
 
         if(digitalRead(INT_PIN) == HIGH){

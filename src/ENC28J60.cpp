@@ -16,6 +16,7 @@ uint16_t g_enc_rxstat = 0;
 uint16_t g_enc_rxbcnt = 0;
 enc_err g_enc_err = ENC_NO_ERR;
 byte g_enc_series = 0;
+byte g_enc_reg_econ1 = 0;
 
 inline byte _first_byte(byte op, byte arg) {
     // assembe first byte in operation from opcode and argument
@@ -97,6 +98,21 @@ void enc_op_write(byte op, byte arg, byte data) {
         while (0);
     #endif
 
+    byte * cache = NULL;
+
+    if (arg == ECON1) {
+        cache = &g_enc_reg_econ1;
+    }
+
+    if(cache) {
+        if (ENC28J60_WRITE_CTRL_REG == op) {
+            *cache = data;
+        } else if (ENC28J60_BIT_FIELD_SET == op) {
+            *cache |= data;
+        } else if (ENC28J60_BIT_FIELD_CLR == op) {
+            *cache ^= data;
+        }
+    }
 }
 
 byte enc_op_read(uint8_t op, uint8_t arg) {
@@ -148,6 +164,18 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
         while (0);
     #endif
 
+    byte * cache = NULL;
+
+    if (arg == ECON1) {
+        cache = &g_enc_reg_econ1;
+    }
+
+    if(cache) {
+        if (ENC28J60_READ_CTRL_REG == op) {
+            *cache = result;
+        }
+    }
+
     return result;
 }
 
@@ -198,16 +226,16 @@ void enc_bank_sel(byte reg) {
     }
 
     byte bsel = (reg & BANK_MASK) >> 5;
-    byte econ1 = enc_op_read(ENC28J60_READ_CTRL_REG, ECON1);
+    // g_enc_reg_econ1 = enc_op_read(ENC28J60_READ_CTRL_REG, ECON1);
     // Serial.print(F("ECON1: 0x"));
     // Serial.println(econ1, HEX);
 
-    if ((ECON1_BSEL_MASK & (econ1 ^ bsel))) {
+    if ((ECON1_BSEL_MASK & (g_enc_reg_econ1 ^ bsel))) {
         if (DEBUG_OP_RW) {
             Serial.print(F("SPCR is 0x"));
             Serial.print(SPCR, HEX);
             Serial.print(F(" | changing bank from "));
-            Serial.print(econ1 & ECON1_BSEL_MASK, HEX);
+            Serial.print(g_enc_reg_econ1 & ECON1_BSEL_MASK, HEX);
             Serial.print(F(" to "));
             Serial.println(bsel & ECON1_BSEL_MASK, HEX);
         }
@@ -216,7 +244,7 @@ void enc_bank_sel(byte reg) {
     }
 
     // bits which need to be set in ECON1.bsel
-    byte set_bits = ECON1_BSEL_MASK & (~econ1 & bsel);
+    byte set_bits = ECON1_BSEL_MASK & (~g_enc_reg_econ1 & bsel);
     // Serial.print(F("set bits: 0x"));
     // Serial.println(set_bits, HEX);
 
@@ -226,16 +254,16 @@ void enc_bank_sel(byte reg) {
 
 
     // bits which need to be cleared in ECON1.bsel
-    byte clear_bits = ECON1_BSEL_MASK & (econ1 & ~bsel);
+    byte clear_bits = ECON1_BSEL_MASK & (g_enc_reg_econ1 & ~bsel);
     // Serial.print(F("clear bits: 0x"));
     // Serial.println(clear_bits, HEX);
     if( clear_bits ) {
         enc_op_write(ENC28J60_BIT_FIELD_CLR, ECON1, clear_bits);
     }
 
-    econ1 = enc_op_read(ENC28J60_READ_CTRL_REG, ECON1);
+    g_enc_reg_econ1 = enc_op_read(ENC28J60_READ_CTRL_REG, ECON1);
 
-    if (ECON1_BSEL_MASK & (econ1 ^ bsel)) {
+    if (ECON1_BSEL_MASK & (g_enc_reg_econ1 ^ bsel)) {
         Serial.println(F("ERR: Bank select failed!"));
         g_enc_err = ENC_ERR_BANK;
         return;
@@ -619,8 +647,6 @@ void enc_peek_buf(int offset, int len) {
 
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
     enc_write_regw(ERDPTL, _buffer_sum(old_erdpt, offset));
-    // Serial.println(F("g_enc_eth_frame_buf: 0x"));
-    // Serial.println((int)(g_enc_eth_frame_buf), HEX);
     enc_read_buf(g_enc_eth_frame_buf, len);
     if( DEBUG_ETH ) {
         for( int i=0; i<len; i++){
