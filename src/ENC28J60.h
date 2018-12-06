@@ -341,16 +341,18 @@
  */
 
 #define MAC_BYTES 6
+#define ETH_HEADER_BYTES (MAC_BYTES * 2 + 2)
 
 #define REPEAT_BREAKPOINTS 0
-#define DEBUG_ETH 1
+#define DEBUG_ETH 0
+#define DEBUG_ETH_BASIC 0
 #define DEBUG_OP_RW 0
 
 
 void enc_op_write(byte op, byte arg, byte data);
 byte enc_op_read(uint8_t op, uint8_t arg);
 void enc_soft_reset();
-int enc_bank_sel(byte reg);
+void enc_bank_sel(byte reg);
 byte enc_read_reg(byte reg);
 uint16_t enc_read_regw(byte reg);
 void enc_write_reg(byte reg, byte value);
@@ -368,14 +370,28 @@ void enc_regs_debug();
 int enc_hw_init();
 void enc_hw_enable();
 void enc_hw_disable();
-void enc_peek_buf(int len);
+void enc_peek_buf(int offset, int len);
 void _enc_dump_pkt(int bcnt);
 void _enc_refresh_rsv_globals();
 void _enc_print_rxstat(uint16_t rxstat);
+uint16_t _erxrdpt_workaround(uint16_t erxrdpt, uint16_t start, uint16_t end);
+uint16_t _buffer_sum(int start, int offset);
+void consume_packet();
 
 extern uint16_t g_enc_npp;
 extern uint16_t g_enc_rxstat;
 extern byte * g_enc_rsv;
 extern uint16_t g_enc_rxbcnt;
+extern byte * g_enc_eth_frame_buf;
+extern byte g_enc_series;
+
+enum enc_err{
+    ENC_NO_ERR,
+    ENC_ERR_OP,
+    ENC_ERR_ARG,
+    ENC_ERR_BANK
+};
+
+extern enc_err g_enc_err;
 
 #endif

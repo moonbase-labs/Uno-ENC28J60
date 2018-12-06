@@ -368,8 +368,8 @@ void demo_receive() {
     uint16_t old_erdpt;
     bool dump_packet;
 
-    do {} while (!Serial.available());
-    while (Serial.available()){Serial.read();delay(1);}
+    // do {} while (!Serial.available());
+    // while (Serial.available()){Serial.read();delay(1);}
 
     do {
         enc_hw_enable();
@@ -390,12 +390,13 @@ void demo_receive() {
 
         byte epktcnt = enc_read_reg(EPKTCNT);
 
-        if(epktcnt) {
-            if( DEBUG_ETH ) {
-                Serial.print("nonzero packet count: ");
-                Serial.println(epktcnt);
-            }
-        } else {
+        if( DEBUG_ETH_BASIC & SOMETIMES_PRINT_COND) {
+            Serial.print("epktcnt: ");
+            Serial.println(epktcnt, HEX);
+            SOMETIMES_PRINT_END;
+        }
+
+        if(!epktcnt) {
             if (SOMETIMES_PRINT_COND & DEBUG_ETH) {
                 Serial.println("No packets yet");
                 SOMETIMES_PRINT_END;
@@ -411,8 +412,20 @@ void demo_receive() {
 
         dump_packet = true;
 
-        Serial.print("old erdpt: ");
-        Serial.println(old_erdpt, HEX);
+        if( DEBUG_ETH_BASIC & SOMETIMES_PRINT_COND) {
+            Serial.print("old erdpt: ");
+            Serial.println(old_erdpt, HEX);
+            SOMETIMES_PRINT_END;
+        }
+
+        if(g_enc_err) {
+            enc_regs_debug();
+            Serial.print("ERROR");
+            Serial.println(g_enc_err);
+            g_enc_err = ENC_NO_ERR;
+            consume_packet();
+            return;
+        }
 
         _enc_refresh_rsv_globals();
 
@@ -426,22 +439,32 @@ void demo_receive() {
         }
 
 
-        if(dump_packet && RSV_GETBIT(g_enc_rxstat, RSV_RXOK)) {
-            if( DEBUG_ETH ) Serial.println("RX OK");
-        } else {
+        if(dump_packet && !RSV_GETBIT(g_enc_rxstat, RSV_RXOK)) {
             Serial.println("RX not ok, rxstat:");
             _enc_print_rxstat(g_enc_rxstat);
+            enc_regs_debug();
             // TODO: when should packet be consumed?
             dump_packet = false;
         }
 
-        if(dump_packet && (g_enc_rxbcnt < MAX_FRAMELEN)) {
-            if( DEBUG_ETH ) Serial.println("Length ok");
-        } else {
+        if(dump_packet && (g_enc_rxbcnt > MAX_FRAMELEN)) {
             Serial.print("Length not ok, ");
             Serial.print(g_enc_rxbcnt);
             Serial.print(" > MAX_FRAMELEN: ");
             Serial.println(MAX_FRAMELEN);
+            Serial.println("rxstat:");
+            _enc_print_rxstat(g_enc_rxstat);
+            // TODO: when should packet be consumed?
+
+            consume_packet();
+            dump_packet = false;
+        }
+
+        if(dump_packet && (g_enc_rxbcnt < ETH_HEADER_BYTES)) {
+            Serial.print("Length not ok, ");
+            Serial.print(g_enc_rxbcnt);
+            Serial.print(" < ETH_HEADER_BYTES: ");
+            Serial.println(ETH_HEADER_BYTES);
             Serial.println("rxstat:");
             _enc_print_rxstat(g_enc_rxstat);
             // TODO: when should packet be consumed?
@@ -464,16 +487,40 @@ void demo_receive() {
             dump_packet = false;
         }
 
-        if(dump_packet) {
-            if( DEBUG_ETH ) Serial.println("packet: ");
-            _enc_dump_pkt(g_enc_rxbcnt);
+        if(g_enc_err) {
+            enc_regs_debug();
+            Serial.print("ERROR");
+            Serial.println(g_enc_err);
+            g_enc_err = ENC_NO_ERR;
+            consume_packet();
+            return;
+        }
 
-            enc_write_regw(ERDPTL, g_enc_npp);
-            enc_write_regw(ERXRDPTL, g_enc_npp);
-            enc_bit_set(ECON2, ECON2_PKTDEC);
+        if(dump_packet) {
+            // TODO: only dump what we care about
+
+
+            // if( DEBUG_ETH ) Serial.println("packet: ");
+            // _enc_dump_pkt(g_enc_rxbcnt);
+            // _enc_print_rxstat(g_enc_rxstat);
+            // enc_peek_buf(ETH_HEADER_BYTES, g_enc_rxbcnt-ETH_HEADER_BYTES);
+
+            enc_write_regw(ERDPTL, _buffer_sum(old_erdpt,
+                2 + RSV_LEN + ETH_HEADER_BYTES
+            ));
+
+            g_enc_series = enc_read_buf_b();
+
+            if(DEBUG_ETH_BASIC) {
+                Serial.print("series: ");
+                Serial.println(g_enc_series, HEX);
+            }
+
+            enc_read_buf(0, g_enc_rxbcnt - 1);
+
+            consume_packet();
         } else {
             enc_write_regw(ERDPTL, old_erdpt);
-            // delay(100);
         }
 
     } while (1);
