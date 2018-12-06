@@ -351,8 +351,6 @@ void demo_mac_interference() {
     enc_reg_print("MACON3", MACON3);
 }
 
-long last_print = 0;
-
 /**
  * Receive ethernet packets from the ENC
  */
@@ -374,10 +372,9 @@ void demo_receive() {
     do {
         if(g_enc_err) {
             enc_regs_debug();
-            Serial.print(F("ERROR"));
+            Serial.print(F("ERROR, resetting "));
             Serial.println(g_enc_err);
             g_enc_err = ENC_NO_ERR;
-            consume_packet();
             return;
         }
 
@@ -429,10 +426,9 @@ void demo_receive() {
 
         if(g_enc_err) {
             enc_regs_debug();
-            Serial.print(F("ERROR"));
+            Serial.print(F("ERROR, resetting "));
             Serial.println(g_enc_err);
             g_enc_err = ENC_NO_ERR;
-            consume_packet();
             return;
         }
 
@@ -447,13 +443,18 @@ void demo_receive() {
             Serial.println(g_enc_rxbcnt);
         }
 
+        if(RSV_GETBIT(g_enc_rxstat, RSV_ZERO)) {
+            Serial.println(F("RXSTAT corrupt, resetting"));
+            return;
+        }
+
 
         if(dump_packet && !RSV_GETBIT(g_enc_rxstat, RSV_RXOK)) {
             Serial.println(F("RX not ok, "));
             if(RSV_GETBIT(g_enc_rxstat, RSV_RXCONTROLFRAME)) {
                 // don't care about control frames yet
                 consume_packet();
-                return;
+                continue;
             }
             Serial.println(F("rxstat:"));
             _enc_print_rxstat(g_enc_rxstat);
@@ -506,10 +507,9 @@ void demo_receive() {
 
         if(g_enc_err) {
             enc_regs_debug();
-            Serial.print(F("ERROR"));
+            Serial.print(F("ERROR, resetting "));
             Serial.println(g_enc_err);
             g_enc_err = ENC_NO_ERR;
-            consume_packet();
             return;
         }
 
@@ -540,13 +540,17 @@ void demo_receive() {
             enc_write_regw(ERDPTL, old_erdpt);
         }
 
+        float pps = (float)(1000.0 * g_enc_pkts_consumed) / (float)(probe_timer());
+
         // print summary
         Serial.print(F("SER:"));
-        if(g_enc_series<0x1f) Serial.print(0);
+        if(g_enc_series<0x10) Serial.print(0);
         Serial.print(g_enc_series,HEX);
         Serial.print(F(" CNT:"));
-        if(epktcnt<0x1f) Serial.print(0);
+        if(epktcnt<0x10) Serial.print(0);
         Serial.print(epktcnt,HEX);
+        Serial.print(F(" PPS:"));
+        Serial.print(pps,HEX);
         Serial.println();
 
     } while (1);

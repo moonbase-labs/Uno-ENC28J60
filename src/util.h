@@ -13,10 +13,7 @@
 
 extern long timer_start;
 extern long g_last_print;
-inline long stop_timer();
-inline void start_timer();
-
-
-
+long probe_timer();
+void start_timer();
 
 #endif

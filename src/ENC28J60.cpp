@@ -17,6 +17,7 @@ uint16_t g_enc_rxbcnt = 0;
 enc_err g_enc_err = ENC_NO_ERR;
 byte g_enc_series = 0;
 byte g_enc_reg_econ1 = 0;
+long g_enc_pkts_consumed = 0;
 
 inline byte _first_byte(byte op, byte arg) {
     // assembe first byte in operation from opcode and argument
@@ -206,11 +207,14 @@ void enc_soft_reset() {
 
 
     if (poll_ready(ESTAT, ESTAT_RXBUSY, 0)) {
-        Serial.println(F("WARN: ESTAT_RXBUSY should be clear after reset"));
+        Serial.println(F("ERR: ESTAT_RXBUSY should be clear after reset"));
+        g_enc_err = ENC_ERR_RST;
     } else if (poll_ready(ESTAT, ESTAT_CLKRDY, ESTAT_CLKRDY)) {
-        Serial.println(F("WARN: ESTAT_CLKRDY should be set after reset"));
+        Serial.println(F("ERR: ESTAT_CLKRDY should be set after reset"));
+        g_enc_err = ENC_ERR_RST;
     } else {
         Serial.println(F("RESET succesful"));
+        g_enc_err = ENC_NO_ERR;
     }
 }
 
@@ -734,6 +738,7 @@ void consume_packet() {
     enc_write_regw(ERDPTL, g_enc_npp);
     enc_write_regw(ERXRDPTL, _erxrdpt_workaround(g_enc_npp, RXSTART_INIT, RXSTOP_INIT));
     enc_bit_set(ECON2, ECON2_PKTDEC);
+    g_enc_pkts_consumed++;
 }
 
 /**

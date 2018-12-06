@@ -385,12 +385,14 @@ extern byte * g_enc_rsv;
 extern uint16_t g_enc_rxbcnt;
 extern byte * g_enc_eth_frame_buf;
 extern byte g_enc_series;
+extern long g_enc_pkts_consumed;
 
 enum enc_err{
     ENC_NO_ERR,
     ENC_ERR_OP,
     ENC_ERR_ARG,
-    ENC_ERR_BANK
+    ENC_ERR_BANK,
+    ENC_ERR_RST,
 };
 
 extern enc_err g_enc_err;
