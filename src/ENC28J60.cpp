@@ -5,15 +5,20 @@
  * ENC specific stuff
  */
 
-uint16_t g_next_packet = RXSTART_INIT;
+/**
+ * Temporary Recieve Status Vector storage
+ * (including Next Packet Pointer because that's how Linux does it)
+ */
+byte * g_enc_rsv = (byte *) malloc(RSV_SIZE * sizeof(byte));
+byte * g_enc_eth_frame_buf = (byte *) malloc((MAX_FRAMELEN+0x60) * sizeof(byte));
+uint16_t g_enc_npp = RXSTART_INIT;
+uint16_t g_enc_rxstat = 0;
+uint16_t g_enc_rxbcnt = 0;
 
 inline byte _first_byte(byte op, byte arg) {
     // assembe first byte in operation from opcode and argument
     return op | (arg & ADDR_MASK);
 }
-
-long last_print = 0;
-#define PRINT_DELAY 200
 
 void enc_op_write(byte op, byte arg, byte data) {
     // Perform a SPI operation on the ENC28J60 which has a single byte data argument
@@ -57,7 +62,7 @@ void enc_op_write(byte op, byte arg, byte data) {
         _endTransaction();
 
         #if REPEAT_BREAKPOINTS
-        if ((millis() - last_print) > PRINT_DELAY)
+        if (SOMETIMES_PRINT_COND)
         #else
         if (DEBUG_OP_RW)
         #endif
@@ -78,7 +83,7 @@ void enc_op_write(byte op, byte arg, byte data) {
             Serial.print(arg & ADDR_MASK, HEX);
             Serial.print(" with ");
             Serial.println(op, HEX);
-            last_print = millis();
+            SOMETIMES_PRINT_END;
         }
     }
     #if REPEAT_BREAKPOINTS
@@ -115,7 +120,7 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
         _endTransaction();
 
         #if REPEAT_BREAKPOINTS
-        if ((millis() - last_print) > PRINT_DELAY)
+        if (SOMETIMES_PRINT_COND)
         #else
         if (DEBUG_OP_RW)
         #endif
@@ -128,7 +133,7 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
             Serial.print(arg & ADDR_MASK, HEX);
             Serial.print(" with ");
             Serial.println(op, HEX);
-            last_print = millis();
+            SOMETIMES_PRINT_END;
         }
     }
     #if REPEAT_BREAKPOINTS
@@ -181,11 +186,11 @@ void enc_soft_reset() {
  * Select the correct bank in order to access register, if not already selected
  *  - reg: The register definition, with bank encoded in BANK_MASK bits
  */
-void enc_bank_sel(byte reg) {
+int enc_bank_sel(byte reg) {
 
     if((reg & ADDR_MASK) > 0x1A) {
         // Is an all-bank register, selected bank does not matter.
-        return;
+        return 0;
     }
 
     byte bsel = (reg & BANK_MASK) >> 5;
@@ -203,7 +208,7 @@ void enc_bank_sel(byte reg) {
             Serial.println(bsel & ECON1_BSEL_MASK, HEX);
         }
     } else {
-        return;
+        return 0;
     }
 
     // bits which need to be set in ECON1.bsel
@@ -228,6 +233,7 @@ void enc_bank_sel(byte reg) {
 
     if (ECON1_BSEL_MASK & (econ1 ^ bsel)) {
         Serial.println("ERR: Bank select failed!");
+        return 1;
     }
 
 }
@@ -571,17 +577,19 @@ void enc_regs_print(String name, byte reg, int n_regs) {
 
 void enc_peek_buf(int len) {
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
-    byte buf_byte;
-    for( int i=0; i<len; i++){
-        enc_read_buf(&buf_byte, 1);
-        if(buf_byte<0x10) Serial.print(0);
-        Serial.print(buf_byte, HEX);
+
+    enc_read_buf(g_enc_eth_frame_buf, len);
+    if( DEBUG_ETH ) {
+        for( int i=0; i<len; i++){
+            if(g_enc_eth_frame_buf[i]<0x10) Serial.print(0);
+            Serial.print(g_enc_eth_frame_buf[i], HEX);
+        }
+        Serial.println();
     }
-    Serial.println();
     enc_write_regw(ERDPTL, old_erdpt);
 }
 
-inline void _enc_print_rxstat(uint16_t rxstat) {
+void _enc_print_rxstat(uint16_t rxstat) {
     Serial.print("-> RSV_RXLONGEVDROPEV: 0x");
     Serial.println(RSV_GETBIT(rxstat, RSV_RXLONGEVDROPEV), HEX);
     Serial.print("-> RSV_CARRIEREV: 0x");
@@ -625,66 +633,74 @@ inline void _print_mac() {
     Serial.println();
 }
 
-inline void _enc_dump_pkt(int rbcnt) {
-    Serial.print("-> DA: ");
+void _enc_dump_pkt(int bcnt) {
+    if( DEBUG_ETH ) {
+        Serial.print("-> DA: ");
+    }
     enc_read_buf(mac, MAC_BYTES);
-    rbcnt -= MAC_BYTES;
-    _print_mac();
-    Serial.print("-> SA: ");
+    bcnt -= MAC_BYTES;
+    if( DEBUG_ETH ) {
+        _print_mac();
+        Serial.print("-> SA: ");
+    }
     enc_read_buf(mac, MAC_BYTES);
-    rbcnt -= MAC_BYTES;
-    _print_mac();
-    Serial.print("-> TYP/LEN: ");
+    bcnt -= MAC_BYTES;
+    if( DEBUG_ETH ) {
+        _print_mac();
+        Serial.print("-> TYP/LEN: ");
+    }
     uint16_t typ_len = enc_read_buf_w();
-    rbcnt -= MAC_BYTES;
-    Serial.println(typ_len);
-    Serial.print("-> (rbcnt remaining): ");
-    Serial.println(rbcnt);
-
-    enc_peek_buf(rbcnt);
+    bcnt -= MAC_BYTES;
+    if( DEBUG_ETH ) {
+        Serial.println(typ_len);
+        Serial.print("-> (bcnt remaining): ");
+        Serial.println(bcnt);
+    }
+    enc_peek_buf(bcnt);
 }
 
 /**
- * Temporary Recieve Status Vector storage
- * (including Next Packet Pointer because that's how Linux does it)
+ *  Grab the Next Packet Pointer, RX Status, RX Byte Count from buffer
+ *  Does not restore ERDPT
  */
-byte * rsv = malloc(RSV_SIZE * sizeof(byte));
+void _enc_refresh_rsv_globals() {
+    enc_read_buf(g_enc_rsv, RSV_SIZE);
+
+    g_enc_npp = g_enc_rsv[1];
+    g_enc_npp <<= 8;
+    g_enc_npp |= g_enc_rsv[0];
+
+    g_enc_rxbcnt = g_enc_rsv[3];
+    g_enc_rxbcnt <<= 8;
+    g_enc_rxbcnt |= g_enc_rsv[2];
+
+    g_enc_rxstat = g_enc_rsv[5];
+    g_enc_rxstat <<= 8;
+    g_enc_rxstat |= g_enc_rsv[4];
+}
 
 /**
  * Dumps the NPP, Receive status vector and packet located at ERDPT, seeks back
  */
 void enc_peek_npp_rsv_pkt() {
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
-    uint16_t rbcnt, rxstat;
 
     Serial.print("old erdpt: ");
     Serial.println(old_erdpt, HEX);
 
-    enc_read_buf(rsv, RSV_SIZE);
-
-    g_next_packet = rsv[1];
-    g_next_packet <<= 8;
-    g_next_packet |= rsv[0];
-
-    rbcnt = rsv[3];
-    rbcnt <<= 8;
-    rbcnt |= rsv[2];
-
-    rxstat = rsv[5];
-    rxstat <<= 8;
-    rxstat |= rsv[4];
+    _enc_refresh_rsv_globals();
 
     Serial.print("next packet: 0x");
-    Serial.println(g_next_packet, HEX);
+    Serial.println(g_enc_npp, HEX);
 
-    Serial.print("rbcnt: ");
-    Serial.println(rbcnt);
+    Serial.print("g_enc_rxbcnt: ");
+    Serial.println(g_enc_rxbcnt);
 
     Serial.println("rxstat: ");
-    _enc_print_rxstat(rxstat);
+    _enc_print_rxstat(g_enc_rxstat);
 
     Serial.println("packet: ");
-    _enc_dump_pkt(rbcnt);
+    _enc_dump_pkt(g_enc_rxbcnt);
 
     enc_write_regw(ERDPTL, old_erdpt);
 }

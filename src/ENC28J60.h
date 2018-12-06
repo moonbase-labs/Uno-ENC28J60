@@ -342,19 +342,15 @@
 
 #define MAC_BYTES 6
 
-
-/**
- * Debugging
- */
 #define REPEAT_BREAKPOINTS 0
-
+#define DEBUG_ETH 1
 #define DEBUG_OP_RW 0
 
 
 void enc_op_write(byte op, byte arg, byte data);
 byte enc_op_read(uint8_t op, uint8_t arg);
 void enc_soft_reset();
-void enc_bank_sel(byte reg);
+int enc_bank_sel(byte reg);
 byte enc_read_reg(byte reg);
 uint16_t enc_read_regw(byte reg);
 void enc_write_reg(byte reg, byte value);
@@ -373,31 +369,13 @@ int enc_hw_init();
 void enc_hw_enable();
 void enc_hw_disable();
 void enc_peek_buf(int len);
+void _enc_dump_pkt(int bcnt);
+void _enc_refresh_rsv_globals();
+void _enc_print_rxstat(uint16_t rxstat);
 
-/**
- * Most significant 16 bits of Recieve Status Vector,
- * Not including the Recieved Byte Count Field
- */
-typedef union {
-    uint16_t val;
-    struct {
-        byte zero : 1;
-        byte rxvlan :1;
-        byte unkn :1;
-        byte rxpcf :1;
-        byte rxcf :1;
-        byte drib :1;
-        byte rxbcpkt :1;
-        byte rxmckpt :1;
-        byte rxok :1;
-        byte e_range :1;
-        byte e_lenchk :1;
-        byte e_crc :1;
-        byte reserved19 :1;
-        byte ceps :1;
-        byte reserved17 :1;
-        byte longdrop :1;
-    };
-} rsv_msb;
+extern uint16_t g_enc_npp;
+extern uint16_t g_enc_rxstat;
+extern byte * g_enc_rsv;
+extern uint16_t g_enc_rxbcnt;
 
 #endif

@@ -351,6 +351,7 @@ void demo_mac_interference() {
     enc_reg_print("MACON3", MACON3);
 }
 
+long last_print = 0;
 
 /**
  * Receive ethernet packets from the ENC
@@ -364,29 +365,117 @@ void demo_receive() {
     byte mac_addr[] = {0x69, 0x69, 0x69, 0x69, 0x69, 0x69};
     enc_set_mac_addr(mac_addr);
 
+    uint16_t old_erdpt;
+    bool dump_packet;
+
+    do {} while (!Serial.available());
+    while (Serial.available()){Serial.read();delay(1);}
+
     do {
         enc_hw_enable();
 
         if(digitalRead(INT_PIN) == HIGH){
-            Serial.println("int pint high as fuck");
+            if (SOMETIMES_PRINT_COND & DEBUG_ETH) {
+                Serial.println("int pint high as fuck");
+                SOMETIMES_PRINT_END;
+            }
         } else {
-            Serial.println("int pin low");
+            if( DEBUG_ETH ) {
+                Serial.println("int pin low");
+            }
         }
 
-        enc_regs_debug();
         enc_hw_disable();
+        // enc_regs_debug();
 
-        Serial.println("buffer: ");
-        enc_peek_buf(100);
-        enc_peek_npp_rsv_pkt();
+        byte epktcnt = enc_read_reg(EPKTCNT);
 
-        uint16_t old_erdpt = enc_read_regw(ERDPTL);
+        if(epktcnt) {
+            if( DEBUG_ETH ) {
+                Serial.print("nonzero packet count: ");
+                Serial.println(epktcnt);
+            }
+        } else {
+            if (SOMETIMES_PRINT_COND & DEBUG_ETH) {
+                Serial.println("No packets yet");
+                SOMETIMES_PRINT_END;
+            }
+            continue;
+        }
+
+        // Serial.println("buffer: ");
+        // enc_peek_buf(100);
+        // enc_peek_npp_rsv_pkt();
+
+        old_erdpt = enc_read_regw(ERDPTL);
+
+        dump_packet = true;
+
+        Serial.print("old erdpt: ");
+        Serial.println(old_erdpt, HEX);
+
+        _enc_refresh_rsv_globals();
+
+        /* TODO: move this to separate validation function? */
+
+        if( DEBUG_ETH ) {
+            Serial.print("next packet: 0x");
+            Serial.println(g_enc_npp, HEX);
+            Serial.print("rxbcnt: ");
+            Serial.println(g_enc_rxbcnt);
+        }
 
 
-        delay(100);
-        do {
-        } while (!Serial.available());
-        while (Serial.available()){Serial.read();delay(1);}
+        if(dump_packet && RSV_GETBIT(g_enc_rxstat, RSV_RXOK)) {
+            if( DEBUG_ETH ) Serial.println("RX OK");
+        } else {
+            Serial.println("RX not ok, rxstat:");
+            _enc_print_rxstat(g_enc_rxstat);
+            // TODO: when should packet be consumed?
+            dump_packet = false;
+        }
+
+        if(dump_packet && (g_enc_rxbcnt < MAX_FRAMELEN)) {
+            if( DEBUG_ETH ) Serial.println("Length ok");
+        } else {
+            Serial.print("Length not ok, ");
+            Serial.print(g_enc_rxbcnt);
+            Serial.print(" > MAX_FRAMELEN: ");
+            Serial.println(MAX_FRAMELEN);
+            Serial.println("rxstat:");
+            _enc_print_rxstat(g_enc_rxstat);
+            // TODO: when should packet be consumed?
+            dump_packet = false;
+        }
+
+        if(dump_packet && ((int)(g_enc_npp) < RXSTART_INIT)) {
+            Serial.print("Next Packet Pointer out of bounds: 0x");
+            Serial.print(g_enc_npp, HEX);
+            Serial.print(" < RXSTART_INIT: 0x");
+            Serial.println(RXSTART_INIT, HEX);
+            dump_packet = false;
+        }
+
+        if(dump_packet && ((int)(g_enc_npp) > RXSTOP_INIT)) {
+            Serial.print("Next Packet Pointer out of bounds: 0x");
+            Serial.print(g_enc_npp, HEX);
+            Serial.print(" > RXSTOP_INIT: 0x");
+            Serial.println(RXSTOP_INIT, HEX);
+            dump_packet = false;
+        }
+
+        if(dump_packet) {
+            if( DEBUG_ETH ) Serial.println("packet: ");
+            _enc_dump_pkt(g_enc_rxbcnt);
+
+            enc_write_regw(ERDPTL, g_enc_npp);
+            enc_write_regw(ERXRDPTL, g_enc_npp);
+            enc_bit_set(ECON2, ECON2_PKTDEC);
+        } else {
+            enc_write_regw(ERDPTL, old_erdpt);
+            // delay(100);
+        }
+
     } while (1);
 
 }
