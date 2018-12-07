@@ -15,7 +15,8 @@ uint16_t g_enc_npp = RXSTART_INIT;
 uint16_t g_enc_rxstat = 0;
 uint16_t g_enc_rxbcnt = 0;
 enc_err g_enc_err = ENC_NO_ERR;
-byte g_enc_sequence = 0;
+uint16_t g_enc_sequence = 0;
+
 byte g_enc_reg_econ1 = 0;
 byte g_enc_reg_econ2 = 0;
 byte g_enc_reg_estat = 0;
@@ -155,8 +156,7 @@ void _print_arg(byte arg) {
     }
     Serial.print(":");
     arg &= ADDR_MASK;
-    if(arg<0x10)Serial.print(0);
-    Serial.print(arg,HEX);
+    print_hex_byte(arg);
 }
 
 void enc_op_write(byte op, byte arg, byte data) {
@@ -211,7 +211,7 @@ void enc_op_write(byte op, byte arg, byte data) {
             else if(ENC28J60_BIT_FIELD_CLR == op) {
                 Serial.print(F(" | clearing mask 0x"));
             }
-            Serial.print(data, HEX);
+            print_hex_byte(data);
             Serial.print(F(" in arg "));
             _print_arg(arg);
             Serial.print(F(" with "));
@@ -264,7 +264,7 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
         if (g_enc_debug_io && (SOMETIMES_PRINT_COND || !g_enc_repeat_breakpoints)) {
             DEBUG_PREFIX;
             Serial.print(F(" | reading 0x"));
-            Serial.print(result, HEX);
+            print_hex_byte(result);
             Serial.print(F(" from arg "));
             _print_arg(arg);
             Serial.print(F(" with "));
@@ -339,7 +339,7 @@ void enc_bank_sel(byte reg) {
     byte bsel = (reg & BANK_MASK) >> 5;
     g_enc_reg_econ1 = enc_op_read(ENC28J60_READ_CTRL_REG, ECON1);
     // Serial.print(F("ECON1: 0x"));
-    // Serial.println(econ1, HEX);
+    // println_hex_byte(econ1);
 
     if ((ECON1_BSEL_MASK & (g_enc_reg_econ1 ^ bsel))) {
         if (g_enc_debug_io) {
@@ -356,7 +356,7 @@ void enc_bank_sel(byte reg) {
     // bits which need to be set in ECON1.bsel
     byte set_bits = ECON1_BSEL_MASK & (~g_enc_reg_econ1 & bsel);
     // Serial.print(F("set bits: 0x"));
-    // Serial.println(set_bits, HEX);
+    // println_hex_byte(set_bits);
 
     if( set_bits ) {
         enc_op_write(ENC28J60_BIT_FIELD_SET, ECON1, set_bits);
@@ -366,7 +366,7 @@ void enc_bank_sel(byte reg) {
     // bits which need to be cleared in ECON1.bsel
     byte clear_bits = ECON1_BSEL_MASK & (g_enc_reg_econ1 & ~bsel);
     // Serial.print(F("clear bits: 0x"));
-    // Serial.println(clear_bits, HEX);
+    // println_hex_byte(clear_bits);
     if( clear_bits ) {
         enc_op_write(ENC28J60_BIT_FIELD_CLR, ECON1, clear_bits);
     }
@@ -755,8 +755,7 @@ void enc_hw_disable() {
 void enc_reg_print(byte reg) {
     byte result = enc_read_reg(reg);
     Serial.print(F("0x"));
-    if (result<0x10) {Serial.print(0);}
-    Serial.print(result, HEX);
+    print_hex_byte(result);
 }
 
 void enc_regs_print(byte reg, int n_regs) {
@@ -764,8 +763,7 @@ void enc_regs_print(byte reg, int n_regs) {
     Serial.print(F("0x"));
     for(int i=n_regs-1; i>=0; i--) {
         result = enc_read_reg(reg + (byte)(i));
-        if (result<0x10) {Serial.print(0);}
-        Serial.print(result, HEX);
+        print_hex_byte(result);
     }
 }
 
@@ -850,11 +848,11 @@ void _enc_dump_pkt(int bcnt) {
         Serial.print(F("-> SA: "));
         _print_mac();
         Serial.print(F("-> TYP/LEN: "));
-        Serial.println(typ_len, HEX);
+        println_hex_byte(typ_len);
         Serial.print(F("-> (bcnt remaining): "));
         Serial.println(bcnt);
     }
-    g_enc_sequence = enc_read_buf_b();
+    g_enc_sequence = enc_read_buf_w();
     bcnt -= 1;
     if( DEBUG_ETH ) {
         enc_peek_buf(0, bcnt);
@@ -867,7 +865,7 @@ void _enc_dump_pkt(int bcnt) {
 void free_packet() {
     if(DEBUG_ETH_BASIC) {
         Serial.print(F("Freeing packet, advancing to 0x"));
-        Serial.println(g_enc_npp, HEX);
+        println_hex_byte(g_enc_npp);
     }
     enc_write_regw(ERDPTL, g_enc_npp);
     enc_write_regw(ERXRDPTL, _erxrdpt_workaround(g_enc_npp, RXSTART_INIT, RXSTOP_INIT));
@@ -902,12 +900,12 @@ void enc_peek_npp_rsv_pkt() {
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
 
     Serial.print(F("old erdpt: "));
-    Serial.println(old_erdpt, HEX);
+    println_hex_byte(old_erdpt);
 
     _enc_refresh_rsv_globals();
 
     Serial.print(F("next packet: 0x"));
-    Serial.println(g_enc_npp, HEX);
+    println_hex_byte(g_enc_npp);
 
     Serial.print(F("g_enc_rxbcnt: "));
     Serial.println(g_enc_rxbcnt);

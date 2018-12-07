@@ -12,11 +12,11 @@ void setup() {
     spi_init();
 
     Serial.print(F("SPI_MODE is 0x"));
-    Serial.println(SPI_MODE, HEX);
+    println_hex_byte(SPI_MODE);
     Serial.print(F("SPCR is 0x"));
-    Serial.println(SPCR, HEX);
+    println_hex_byte(SPCR);
     Serial.print(F("SPSR is 0x"));
-    Serial.println(SPSR, HEX);
+    println_hex_byte(SPSR);
 
     // Serial.print(F("g_enc_eth_frame_buf: 0x"));
     // Serial.println((int)(g_enc_eth_frame_buf), HEX);

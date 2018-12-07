@@ -348,7 +348,7 @@
 #define DEBUG_ETH_BASIC 0
 
 // Maximum sequence number
-#define MAX_SEQUENCE 0xff
+#define MAX_SEQUENCE 0xffff
 
 #define DEBUG_PREFIX \
 Serial.print(F(" | SPCR is 0x")); \
@@ -390,7 +390,7 @@ extern uint16_t g_enc_rxstat;
 extern byte * g_enc_rsv;
 extern uint16_t g_enc_rxbcnt;
 extern byte * g_enc_eth_frame_buf;
-extern byte g_enc_sequence;
+extern uint16_t g_enc_sequence;
 extern long g_enc_pkts_consumed;
 extern bool g_enc_repeat_breakpoints;
 extern bool g_enc_debug_io;

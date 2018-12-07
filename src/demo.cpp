@@ -36,10 +36,10 @@
 //         result = enc_read_reg(reg_addr);
 //         Serial.print(F("read register 0x"));
 //         if(reg_addr < 0x10) {Serial.print(0);}
-//         Serial.print(reg_addr, HEX);
+//         print_hex_byte(reg_addr);
 //         Serial.print(F(", response: 0x"));
 //         if(result < 0x10) {Serial.print(0);}
-//         Serial.println(result, HEX);
+//         println_hex_byte(result);
 //     }
 //
 //     // Should look like
@@ -68,27 +68,27 @@
 //
 //     Serial.print(F("View the ECON1 register (should be initialized to 0x00): 0x"));
 //     result = enc_read_reg(ECON1);
-//     Serial.println(result, HEX);
+//     println_hex_byte(result);
 //     Serial.print(F("Set the ECON1_RXEN bit field (Enable Recieve)"));
 //     enc_bit_set(ECON1, ECON1_RXEN);
 //     Serial.print(F("View the ECON1 register (should be set to 0x04): 0x"));
 //     result = enc_read_reg(ECON1);
-//     Serial.println(result, HEX);
+//     println_hex_byte(result);
 //     Serial.print(F("clear the ECON1_RXEN bit field (Enable Recieve)"));
 //     enc_bit_clr(ECON1, ECON1_RXEN);
 //     Serial.print(F("View the ECON1 register (should be set to 0x00): 0x"));
 //     result = enc_read_reg(ECON1);
-//     Serial.println(result, HEX);
+//     println_hex_byte(result);
 // }
 //
 // void demo_write_reg() {
 //     byte result;
 //     Serial.print(F("View the ERXSTL:ERXSTH registers (should be initialized to 0xfa, 0x05): 0x"));
 //     result = enc_read_reg(ERXSTL);
-//     Serial.print(result, HEX);
+//     print_hex_byte(result);
 //     Serial.print(F(", 0x"));
 //     // result = enc_read_reg(ERXSTH);
-//     Serial.println(result, HEX);
+//     println_hex_byte(result);
 //
 //     Serial.println(F("set the ERXSTL:ERXSTH registers to (0xaa, 0x05):"));
 //     enc_write_reg(ERXSTL, 0xaa);
@@ -96,10 +96,10 @@
 //
 //     Serial.print(F("View the ERXSTL:ERXSTH registers (should now be set to 0xaa, 0x05): 0x"));
 //     result = enc_read_reg(ERXSTL);
-//     Serial.print(result, HEX);
+//     print_hex_byte(result);
 //     Serial.print(F(", 0x"));
 //     // result = enc_read_reg(ERXSTH);
-//     Serial.println(result, HEX);
+//     println_hex_byte(result);
 //
 //     Serial.println(F("return the ERXSTL:ERXSTH registers to (0xfa, 0x05):"));
 //     enc_write_reg(ERXSTL, 0xfa);
@@ -113,10 +113,10 @@
 //     byte result;
 //     Serial.print(F("View the ERXNDL:ERXNDH registers (should be initialized to 0xff, 0x1f): 0x"));
 //     result = enc_read_reg(ERXNDL);
-//     Serial.print(result, HEX);
+//     print_hex_byte(result);
 //     Serial.print(F(", 0x"));
 //     result = enc_read_reg(ERXNDH);
-//     Serial.println(result, HEX);
+//     println_hex_byte(result);
 //
 //     Serial.println(F("set the ERXNDL:ERXNDH registers to (0xff, 0x07):"));
 //     enc_write_reg(ERXNDL, 0xff);
@@ -124,10 +124,10 @@
 //
 //     Serial.print(F("View the ERXNDL:ERXNDH registers (should now be set to 0xff, 0x07): 0x"));
 //     result = enc_read_reg(ERXNDL);
-//     Serial.print(result, HEX);
+//     print_hex_byte(result);
 //     Serial.print(F(", 0x"));
 //     result = enc_read_reg(ERXNDH);
-//     Serial.println(result, HEX);
+//     println_hex_byte(result);
 //
 //     Serial.println(F("return the ERXNDL:ERXNDH registers to (0xff, 0x1f):"));
 //     enc_write_reg(ERXNDL, 0xff);
@@ -161,7 +161,7 @@
 //     for(uint8_t i=0; i<ARRAY_LEN(testdata); i++){
 //         result = results[i];
 //         if(result < 0x10) {Serial.print(0);}
-//         Serial.print(result, HEX);
+//         print_hex_byte(result);
 //     }
 //     Serial.println();
 // }
@@ -411,7 +411,7 @@ void demo_receive() {
 
         if( DEBUG_ETH_BASIC & SOMETIMES_PRINT_COND) {
             Serial.print(F("epktcnt: "));
-            Serial.println(epktcnt, HEX);
+            println_hex_byte(epktcnt);
             SOMETIMES_PRINT_END;
         }
 
@@ -427,7 +427,7 @@ void demo_receive() {
 
         if(DEBUG_ETH){
             Serial.print(F("buffer at 0x"));
-            Serial.print(old_erdpt, HEX);
+            print_hex_byte(old_erdpt);
             Serial.println(F(": "));
             enc_peek_buf(0, 100);
         }
@@ -440,11 +440,9 @@ void demo_receive() {
             break;
         }
 
-        dump_packet = true;
-
         if( DEBUG_ETH_BASIC & SOMETIMES_PRINT_COND) {
             Serial.print(F("old erdpt: "));
-            Serial.println(old_erdpt, HEX);
+            println_hex_byte(old_erdpt);
             SOMETIMES_PRINT_END;
         }
 
@@ -454,7 +452,7 @@ void demo_receive() {
 
         // if( DEBUG_ETH ) {
         //     Serial.print(F("next packet: 0x"));
-        //     Serial.println(g_enc_npp, HEX);
+        //     println_hex_byte(g_enc_npp);
         //     Serial.print(F("rxbcnt: "));
         //     Serial.println(g_enc_rxbcnt);
         // }
@@ -520,17 +518,17 @@ void demo_receive() {
 
         if(((int)(g_enc_npp) < RXSTART_INIT)) {
             Serial.print(F("Next Packet Pointer out of bounds: 0x"));
-            Serial.print(g_enc_npp, HEX);
+            print_hex_byte(g_enc_npp);
             Serial.print(F(" < RXSTART_INIT: 0x"));
-            Serial.println(RXSTART_INIT, HEX);
+            println_hex_word(RXSTART_INIT);
             break;
         }
 
         if(((int)(g_enc_npp) > RXSTOP_INIT)) {
             Serial.print(F("Next Packet Pointer out of bounds: 0x"));
-            Serial.print(g_enc_npp, HEX);
+            print_hex_byte(g_enc_npp);
             Serial.print(F(" > RXSTOP_INIT: 0x"));
-            Serial.println(RXSTOP_INIT, HEX);
+            println_hex_word(RXSTOP_INIT);
             break;
         }
 
@@ -545,19 +543,22 @@ void demo_receive() {
             2 + RSV_LEN + ETH_HEADER_BYTES
         ));
 
-        g_enc_sequence = enc_read_buf_b();
+        g_enc_sequence = enc_read_buf_w();
 
         if(DEBUG_ETH_BASIC) {
             Serial.print(F("sequence: "));
-            Serial.println(g_enc_sequence, HEX);
+            println_hex_word(g_enc_sequence);
             Serial.print(F("rxbcnt: "));
-            Serial.println(g_enc_rxbcnt, HEX);
+            println_hex_byte(g_enc_rxbcnt);
         }
+
+        dump_packet = true;
 
         if(
             (prev_sequence > g_enc_sequence)
             && (prev_sequence - g_enc_sequence < (MAX_SEQUENCE / 2))
         ) {
+            Serial.println(F("out of order! "));
             dump_packet = false;
         }
 
@@ -569,14 +570,12 @@ void demo_receive() {
 
         if( SOMETIMES_PRINT_COND) {
             float pps = (float)(1000.0 * g_enc_pkts_consumed) / (float)(probe_timer());
-            Serial.print(F("SER:"));
-            if(g_enc_sequence<0x10) Serial.print(0);
-            Serial.print(g_enc_sequence,HEX);
+            Serial.print(F("SEQ:"));
+            print_hex_word(g_enc_sequence);
             Serial.print(F(" CNT:"));
-            if(epktcnt<0x10) Serial.print(0);
-            Serial.print(epktcnt,HEX);
+            print_hex_byte(epktcnt);
             Serial.print(F(" PPS:"));
-            Serial.print(pps,HEX);
+            print_hex_byte(pps);
             Serial.println();
             SOMETIMES_PRINT_END;
         }
