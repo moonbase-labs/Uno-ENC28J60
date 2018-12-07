@@ -370,6 +370,7 @@ void demo_receive() {
     enc_set_mac_addr(mac_addr);
 
     uint16_t old_erdpt;
+    // Determines whether packet is dumped onto LEDs
     bool dump_packet;
 
     byte prev_series;
@@ -399,14 +400,12 @@ void demo_receive() {
                 Serial.println(F("int pint high as fuck"));
                 SOMETIMES_PRINT_END;
             }
+            continue;
         } else {
             if( DEBUG_ETH ) {
                 Serial.println(F("int pin low"));
             }
         }
-
-        // enc_hw_disable();
-        // enc_regs_debug();
 
         byte epktcnt = enc_read_reg(EPKTCNT);
 
@@ -424,10 +423,6 @@ void demo_receive() {
             continue;
         }
 
-        // Serial.println(F("buffer: "));
-        // enc_peek_buf(100);
-        // enc_peek_npp_rsv_pkt();
-
         old_erdpt = enc_read_regw(ERDPTL);
 
         if(DEBUG_ETH){
@@ -437,20 +432,20 @@ void demo_receive() {
             enc_peek_buf(0, 100);
         }
 
-        dump_packet = true;
-
-        if( DEBUG_ETH_BASIC & SOMETIMES_PRINT_COND) {
-            Serial.print(F("old erdpt: "));
-            Serial.println(old_erdpt, HEX);
-            SOMETIMES_PRINT_END;
-        }
-
         if(g_enc_err) {
             enc_regs_debug();
             Serial.print(F("ERROR, resetting "));
             Serial.println(g_enc_err);
             g_enc_err = ENC_NO_ERR;
             break;
+        }
+
+        dump_packet = true;
+
+        if( DEBUG_ETH_BASIC & SOMETIMES_PRINT_COND) {
+            Serial.print(F("old erdpt: "));
+            Serial.println(old_erdpt, HEX);
+            SOMETIMES_PRINT_END;
         }
 
         _enc_refresh_rsv_globals();
@@ -471,15 +466,15 @@ void demo_receive() {
             break;
         }
 
-        /**
-            Data sheet says:
-                When a packet is accepted and completely
-                written into the buffer, the EPKTCNT register will increment,
-                the EIR.PKTIF bit will be set, an interrupt will be
-                generated (if enabled) and the Hardware Write Pointer,
-                ERXWRPT, will automatically advance.
-            This means if EPKTCNT > 0, the first packet in the buffer must be
-            fully written.
+        /*
+        Data sheet says:
+            When a packet is accepted and completely
+            written into the buffer, the EPKTCNT register will increment,
+            the EIR.PKTIF bit will be set, an interrupt will be
+            generated (if enabled) and the Hardware Write Pointer,
+            ERXWRPT, will automatically advance.
+        This means if EPKTCNT > 0, the first packet in the buffer must be
+        fully written.
          */
 
         if(
@@ -497,7 +492,6 @@ void demo_receive() {
             Serial.println(F("rxstat:"));
             _enc_print_rxstat(g_enc_rxstat);
             enc_regs_debug();
-            // TODO: when should packet be consumed?
             free_packet();
             continue;
         }
@@ -511,7 +505,6 @@ void demo_receive() {
             _enc_print_rxstat(g_enc_rxstat);
             Serial.println(F("header: "));
             _enc_dump_pkt(ETH_HEADER_BYTES);
-            // TODO: when should packet be consumed?
             break;
         }
 
@@ -522,7 +515,6 @@ void demo_receive() {
             Serial.println(ETH_HEADER_BYTES);
             Serial.println(F("rxstat:"));
             _enc_print_rxstat(g_enc_rxstat);
-            // TODO: when should packet be consumed?
             break;
         }
 
@@ -539,14 +531,6 @@ void demo_receive() {
             Serial.print(g_enc_npp, HEX);
             Serial.print(F(" > RXSTOP_INIT: 0x"));
             Serial.println(RXSTOP_INIT, HEX);
-            break;
-        }
-
-        if(g_enc_err) {
-            enc_regs_debug();
-            Serial.print(F("ERROR, resetting "));
-            Serial.println(g_enc_err);
-            g_enc_err = ENC_NO_ERR;
             break;
         }
 
