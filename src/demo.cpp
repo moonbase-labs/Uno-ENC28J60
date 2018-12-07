@@ -389,7 +389,7 @@ void demo_receive() {
             Serial.print(F("ERROR, resetting "));
             Serial.println(g_enc_err);
             g_enc_err = ENC_NO_ERR;
-            return;
+            break;
         }
 
         enc_hw_enable();
@@ -450,7 +450,7 @@ void demo_receive() {
             Serial.print(F("ERROR, resetting "));
             Serial.println(g_enc_err);
             g_enc_err = ENC_NO_ERR;
-            return;
+            break;
         }
 
         _enc_refresh_rsv_globals();
@@ -466,7 +466,9 @@ void demo_receive() {
 
         if(RSV_GETBIT(g_enc_rxstat, RSV_ZERO)) {
             Serial.println(F("RXSTAT corrupt, resetting"));
-            return;
+            _enc_print_rxstat(g_enc_rxstat);
+            enc_regs_debug();
+            break;
         }
 
         /**
