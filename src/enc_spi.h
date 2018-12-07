@@ -19,7 +19,7 @@
  * Timing
  */
 
-#define NANOS_2_MILLIS(x) (x/1000 + 1)
+#define NANOS_2_MILLIS(x) (x/1000)
 
 #define CS_PIN 10
 // CS Setup time, micros (Table 16-6)
