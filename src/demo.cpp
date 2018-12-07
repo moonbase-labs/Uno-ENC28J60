@@ -430,7 +430,7 @@ void demo_receive() {
             Serial.print(F("buffer at 0x"));
             print_hex_byte(old_erdpt);
             Serial.println(F(": "));
-            enc_peek_buf(0, 100);
+            enc_peek_buf_slow(0, 100);
         }
 
         if(g_enc_err) {
@@ -443,7 +443,7 @@ void demo_receive() {
 
         if( DEBUG_ETH_BASIC & SOMETIMES_PRINT_COND) {
             Serial.print(F("old erdpt: "));
-            println_hex_byte(old_erdpt);
+            println_hex_word(old_erdpt);
             SOMETIMES_PRINT_END;
         }
 
@@ -453,8 +453,8 @@ void demo_receive() {
 
         // if( DEBUG_ETH ) {
         //     Serial.print(F("next packet: 0x"));
-        //     println_hex_byte(g_enc_npp);
-        //     Serial.print(F("rxbcnt: "));
+        //     print_hex_word(g_enc_npp);
+        //     Serial.print(F(", rxbcnt: "));
         //     Serial.println(g_enc_rxbcnt);
         // }
 
@@ -519,7 +519,7 @@ void demo_receive() {
 
         if(((int)(g_enc_npp) < RXSTART_INIT)) {
             Serial.print(F("Next Packet Pointer out of bounds: 0x"));
-            print_hex_byte(g_enc_npp);
+            print_hex_word(g_enc_npp);
             Serial.print(F(" < RXSTART_INIT: 0x"));
             println_hex_word(RXSTART_INIT);
             break;
@@ -527,7 +527,7 @@ void demo_receive() {
 
         if(((int)(g_enc_npp) > RXSTOP_INIT)) {
             Serial.print(F("Next Packet Pointer out of bounds: 0x"));
-            print_hex_byte(g_enc_npp);
+            print_hex_word(g_enc_npp);
             Serial.print(F(" > RXSTOP_INIT: 0x"));
             println_hex_word(RXSTOP_INIT);
             break;
@@ -548,9 +548,9 @@ void demo_receive() {
 
         if(DEBUG_ETH_BASIC) {
             Serial.print(F("sequence: "));
-            println_hex_word(g_enc_sequence);
-            Serial.print(F("rxbcnt: "));
-            println_hex_byte(g_enc_rxbcnt);
+            print_hex_word(g_enc_sequence);
+            Serial.print(F(", rxbcnt: "));
+            Serial.println(g_enc_rxbcnt);
         }
 
         dump_packet = true;
@@ -563,7 +563,15 @@ void demo_receive() {
             print_hex_word(prev_sequence);
             Serial.print(", this: ");
             println_hex_word(g_enc_sequence);
+
             dump_packet = false;
+        }
+
+        if(g_enc_sequence - prev_sequence > 1) {
+            Serial.print(F("skipped seq! prev: "));
+            print_hex_word(prev_sequence);
+            Serial.print(", this: ");
+            println_hex_word(g_enc_sequence);
         }
 
         if(dump_packet) enc_read_buf(0, g_enc_rxbcnt - 1);

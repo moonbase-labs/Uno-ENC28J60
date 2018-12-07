@@ -779,10 +779,10 @@ void enc_peek_buf(int offset, int len) {
     if(offset) {
         enc_write_regw(ERDPTL, _buffer_sum(old_erdpt, offset));
     }
-    enc_read_buf(g_enc_eth_frame_buf, len);
+    byte buf_byte;
     for( int i=0; i<len; i++){
-        if(g_enc_eth_frame_buf[i]<0x10) Serial.print(0);
-        Serial.print(g_enc_eth_frame_buf[i], HEX);
+        buf_byte = enc_read_buf_b();
+        print_hex_byte(buf_byte);
     }
     Serial.println();
     enc_write_regw(ERDPTL, old_erdpt);
@@ -828,8 +828,7 @@ byte * mac = (byte *)malloc(MAC_BYTES*sizeof(byte));
 inline void _print_mac() {
     for(int i=0; i<MAC_BYTES; i++){
         if(i>0) Serial.print(F(":"));
-        if(mac[i]<0x10) Serial.print(0);
-        Serial.print(mac[i], HEX);
+        print_hex_byte(mac[i]);
     }
     Serial.println();
 }
@@ -855,7 +854,7 @@ void _enc_dump_pkt(int bcnt) {
     g_enc_sequence = enc_read_buf_w();
     bcnt -= 1;
     if( DEBUG_ETH ) {
-        enc_peek_buf(0, bcnt);
+        enc_peek_buf_slow(0, bcnt);
     }
 }
 
