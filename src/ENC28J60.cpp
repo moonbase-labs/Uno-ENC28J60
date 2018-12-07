@@ -767,14 +767,33 @@ void enc_regs_print(byte reg, int n_regs) {
     }
 }
 
-void enc_peek_buf(int offset, int len) {
-    if(len > MAX_FRAMELEN) {
-        Serial.print(F("ERR: enc_peek_buf too long: "));
-        Serial.println(len);
-        g_enc_err = ENC_ERR_ARG;
-        return;
-    }
+// /**
+//  * reads the buffer at offset into g_enc_eth_frame_buf (which sometimes won't malloc)
+//  */
+// void enc_peek_buf(int offset, int len) {
+//     if(len > MAX_FRAMELEN) {
+//         Serial.print(F("ERR: enc_peek_buf too long: "));
+//         Serial.println(len);
+//         g_enc_err = ENC_ERR_ARG;
+//         return;
+//     }
+//
+//     uint16_t old_erdpt = enc_read_regw(ERDPTL);
+//     if(offset) {
+//         enc_write_regw(ERDPTL, _buffer_sum(old_erdpt, offset));
+//     }
+//     enc_read_buf(g_enc_eth_frame_buf, len);
+//     for( int i=0; i<len; i++){
+//         print_hex_byte(g_enc_eth_frame_buf[i]);
+//     }
+//     Serial.println();
+//     enc_write_regw(ERDPTL, old_erdpt);
+// }
 
+/**
+ * Slower buf peek that doesn't rely on malloc
+ */
+void enc_peek_buf_slow(int offset, int len) {
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
     if(offset) {
         enc_write_regw(ERDPTL, _buffer_sum(old_erdpt, offset));
@@ -864,7 +883,7 @@ void _enc_dump_pkt(int bcnt) {
 void free_packet() {
     if(DEBUG_ETH_BASIC) {
         Serial.print(F("Freeing packet, advancing to 0x"));
-        println_hex_byte(g_enc_npp);
+        println_hex_word(g_enc_npp);
     }
     enc_write_regw(ERDPTL, g_enc_npp);
     enc_write_regw(ERXRDPTL, _erxrdpt_workaround(g_enc_npp, RXSTART_INIT, RXSTOP_INIT));
