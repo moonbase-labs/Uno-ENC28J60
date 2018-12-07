@@ -448,22 +448,38 @@ void demo_receive() {
             return;
         }
 
+        /**
+            Data sheet says:
+                When a packet is accepted and completely
+                written into the buffer, the EPKTCNT register will increment,
+                the EIR.PKTIF bit will be set, an interrupt will be
+                generated (if enabled) and the Hardware Write Pointer,
+                ERXWRPT, will automatically advance.
+            This means if EPKTCNT > 0, the first packet in the buffer must be
+            fully written.
+         */
 
-        if(dump_packet && !RSV_GETBIT(g_enc_rxstat, RSV_RXOK)) {
+        if(
+            RSV_GETBIT(g_enc_rxstat, RSV_RXCONTROLFRAME)
+            || RSV_GETBIT(g_enc_rxstat, RSV_CRCERROR)
+            || RSV_GETBIT(g_enc_rxstat, RSV_DRIBBLENIBBLE)
+        ) {
+            // don't care about control frames, CRC or Dribblenibbles yet
+            free_packet();
+            continue;
+        }
+
+        if(!RSV_GETBIT(g_enc_rxstat, RSV_RXOK)) {
             Serial.println(F("RX not ok, "));
-            if(RSV_GETBIT(g_enc_rxstat, RSV_RXCONTROLFRAME)) {
-                // don't care about control frames yet
-                consume_packet();
-                continue;
-            }
             Serial.println(F("rxstat:"));
             _enc_print_rxstat(g_enc_rxstat);
             enc_regs_debug();
             // TODO: when should packet be consumed?
-            dump_packet = false;
+            free_packet();
+            continue;
         }
 
-        if(dump_packet && (g_enc_rxbcnt > MAX_FRAMELEN)) {
+        if((g_enc_rxbcnt > MAX_FRAMELEN)) {
             Serial.print(F("Length not ok, "));
             Serial.print(g_enc_rxbcnt);
             Serial.print(F(" > MAX_FRAMELEN: "));
@@ -473,12 +489,10 @@ void demo_receive() {
             Serial.println(F("header: "));
             _enc_dump_pkt(ETH_HEADER_BYTES);
             // TODO: when should packet be consumed?
-
-            consume_packet();
-            dump_packet = false;
+            break;
         }
 
-        if(dump_packet && (g_enc_rxbcnt < ETH_HEADER_BYTES)) {
+        if((g_enc_rxbcnt < ETH_HEADER_BYTES)) {
             Serial.print(F("Length not ok, "));
             Serial.print(g_enc_rxbcnt);
             Serial.print(F(" < ETH_HEADER_BYTES: "));
@@ -486,23 +500,23 @@ void demo_receive() {
             Serial.println(F("rxstat:"));
             _enc_print_rxstat(g_enc_rxstat);
             // TODO: when should packet be consumed?
-            dump_packet = false;
+            break;
         }
 
-        if(dump_packet && ((int)(g_enc_npp) < RXSTART_INIT)) {
+        if(((int)(g_enc_npp) < RXSTART_INIT)) {
             Serial.print(F("Next Packet Pointer out of bounds: 0x"));
             Serial.print(g_enc_npp, HEX);
             Serial.print(F(" < RXSTART_INIT: 0x"));
             Serial.println(RXSTART_INIT, HEX);
-            dump_packet = false;
+            break;
         }
 
-        if(dump_packet && ((int)(g_enc_npp) > RXSTOP_INIT)) {
+        if(((int)(g_enc_npp) > RXSTOP_INIT)) {
             Serial.print(F("Next Packet Pointer out of bounds: 0x"));
             Serial.print(g_enc_npp, HEX);
             Serial.print(F(" > RXSTOP_INIT: 0x"));
             Serial.println(RXSTOP_INIT, HEX);
-            dump_packet = false;
+            break;
         }
 
         if(g_enc_err) {
@@ -510,7 +524,7 @@ void demo_receive() {
             Serial.print(F("ERROR, resetting "));
             Serial.println(g_enc_err);
             g_enc_err = ENC_NO_ERR;
-            return;
+            break;
         }
 
         if(dump_packet) {
