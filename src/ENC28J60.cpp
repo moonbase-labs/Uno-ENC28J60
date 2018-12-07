@@ -18,10 +18,122 @@ enc_err g_enc_err = ENC_NO_ERR;
 byte g_enc_series = 0;
 byte g_enc_reg_econ1 = 0;
 long g_enc_pkts_consumed = 0;
+bool g_enc_repeat_breakpoints = false;
+bool g_enc_debug_io = false;
 
 inline byte _first_byte(byte op, byte arg) {
     // assembe first byte in operation from opcode and argument
     return op | (arg & ADDR_MASK);
+}
+
+void _print_op(byte op) {
+    switch(op) {
+        case ENC28J60_READ_CTRL_REG: Serial.print(F("RCR")); break;
+        case ENC28J60_READ_BUF_MEM: Serial.print(F("RBM")); break;
+        case ENC28J60_WRITE_CTRL_REG: Serial.print(F("WCR")); break;
+        case ENC28J60_WRITE_BUF_MEM: Serial.print(F("WBM")); break;
+        case ENC28J60_BIT_FIELD_SET: Serial.print(F("BFS")); break;
+        case ENC28J60_BIT_FIELD_CLR: Serial.print(F("BFC")); break;
+        case ENC28J60_SOFT_RESET: Serial.print(F("SR")); break;
+        default: Serial.print(F("???"));
+    }
+}
+
+void _print_arg(byte arg) {
+    switch(arg) {
+        case EIE: Serial.print(F("EIE")); break;
+        case EIR: Serial.print(F("EIR")); break;
+        case ESTAT: Serial.print(F("ESTAT")); break;
+        case ECON2: Serial.print(F("ECON2")); break;
+        case ECON1: Serial.print(F("ECON1")); break;
+        case ERDPTL: Serial.print(F("ERDPTL")); break;
+        case ERDPTH: Serial.print(F("ERDPTH")); break;
+        case EWRPTL: Serial.print(F("EWRPTL")); break;
+        case EWRPTH: Serial.print(F("EWRPTH")); break;
+        case ETXSTL: Serial.print(F("ETXSTL")); break;
+        case ETXSTH: Serial.print(F("ETXSTH")); break;
+        case ETXNDL: Serial.print(F("ETXNDL")); break;
+        case ETXNDH: Serial.print(F("ETXNDH")); break;
+        case ERXSTL: Serial.print(F("ERXSTL")); break;
+        case ERXSTH: Serial.print(F("ERXSTH")); break;
+        case ERXNDL: Serial.print(F("ERXNDL")); break;
+        case ERXNDH: Serial.print(F("ERXNDH")); break;
+        case ERXRDPTL: Serial.print(F("ERXRDPTL")); break;
+        case ERXRDPTH: Serial.print(F("ERXRDPTH")); break;
+        case ERXWRPTL: Serial.print(F("ERXWRPTL")); break;
+        case ERXWRPTH: Serial.print(F("ERXWRPTH")); break;
+        case EDMASTL: Serial.print(F("EDMASTL")); break;
+        case EDMASTH: Serial.print(F("EDMASTH")); break;
+        case EDMANDL: Serial.print(F("EDMANDL")); break;
+        case EDMANDH: Serial.print(F("EDMANDH")); break;
+        case EDMADSTL: Serial.print(F("EDMADSTL")); break;
+        case EDMADSTH: Serial.print(F("EDMADSTH")); break;
+        case EDMACSL: Serial.print(F("EDMACSL")); break;
+        case EDMACSH: Serial.print(F("EDMACSH")); break;
+        case EHT0: Serial.print(F("EHT0")); break;
+        case EHT1: Serial.print(F("EHT1")); break;
+        case EHT2: Serial.print(F("EHT2")); break;
+        case EHT3: Serial.print(F("EHT3")); break;
+        case EHT4: Serial.print(F("EHT4")); break;
+        case EHT5: Serial.print(F("EHT5")); break;
+        case EHT6: Serial.print(F("EHT6")); break;
+        case EHT7: Serial.print(F("EHT7")); break;
+        case EPMM0: Serial.print(F("EPMM0")); break;
+        case EPMM1: Serial.print(F("EPMM1")); break;
+        case EPMM2: Serial.print(F("EPMM2")); break;
+        case EPMM3: Serial.print(F("EPMM3")); break;
+        case EPMM4: Serial.print(F("EPMM4")); break;
+        case EPMM5: Serial.print(F("EPMM5")); break;
+        case EPMM6: Serial.print(F("EPMM6")); break;
+        case EPMM7: Serial.print(F("EPMM7")); break;
+        case EPMCSL: Serial.print(F("EPMCSL")); break;
+        case EPMCSH: Serial.print(F("EPMCSH")); break;
+        case EPMOL: Serial.print(F("EPMOL")); break;
+        case EPMOH: Serial.print(F("EPMOH")); break;
+        case EWOLIE: Serial.print(F("EWOLIE")); break;
+        case EWOLIR: Serial.print(F("EWOLIR")); break;
+        case ERXFCON: Serial.print(F("ERXFCON")); break;
+        case EPKTCNT: Serial.print(F("EPKTCNT")); break;
+        case MACON1: Serial.print(F("MACON1")); break;
+        case MACON3: Serial.print(F("MACON3")); break;
+        case MACON4: Serial.print(F("MACON4")); break;
+        case MABBIPG: Serial.print(F("MABBIPG")); break;
+        case MAIPGL: Serial.print(F("MAIPGL")); break;
+        case MAIPGH: Serial.print(F("MAIPGH")); break;
+        case MACLCON1: Serial.print(F("MACLCON1")); break;
+        case MACLCON2: Serial.print(F("MACLCON2")); break;
+        case MAMXFLL: Serial.print(F("MAMXFLL")); break;
+        case MAMXFLH: Serial.print(F("MAMXFLH")); break;
+        case MAPHSUP: Serial.print(F("MAPHSUP")); break;
+        case MICON: Serial.print(F("MICON")); break;
+        case MICMD: Serial.print(F("MICMD")); break;
+        case MIREGADR: Serial.print(F("MIREGADR")); break;
+        case MIWRL: Serial.print(F("MIWRL")); break;
+        case MIWRH: Serial.print(F("MIWRH")); break;
+        case MIRDL: Serial.print(F("MIRDL")); break;
+        case MIRDH: Serial.print(F("MIRDH")); break;
+        case MAADR1: Serial.print(F("MAADR1")); break;
+        case MAADR0: Serial.print(F("MAADR0")); break;
+        case MAADR3: Serial.print(F("MAADR3")); break;
+        case MAADR2: Serial.print(F("MAADR2")); break;
+        case MAADR5: Serial.print(F("MAADR5")); break;
+        case MAADR4: Serial.print(F("MAADR4")); break;
+        case EBSTSD: Serial.print(F("EBSTSD")); break;
+        case EBSTCON: Serial.print(F("EBSTCON")); break;
+        case EBSTCSL: Serial.print(F("EBSTCSL")); break;
+        case EBSTCSH: Serial.print(F("EBSTCSH")); break;
+        case MISTAT: Serial.print(F("MISTAT")); break;
+        case EREVID: Serial.print(F("EREVID")); break;
+        case ECOCON: Serial.print(F("ECOCON")); break;
+        case EFLOCON: Serial.print(F("EFLOCON")); break;
+        case EPAUSL: Serial.print(F("EPAUSL")); break;
+        case EPAUSH: Serial.print(F("EPAUSH")); break;
+        default: break;
+    }
+    Serial.print(":");
+    arg &= ADDR_MASK;
+    if(arg<0x10)Serial.print(0);
+    Serial.print(arg,HEX);
 }
 
 void enc_op_write(byte op, byte arg, byte data) {
@@ -35,20 +147,18 @@ void enc_op_write(byte op, byte arg, byte data) {
         (ENC28J60_BIT_FIELD_CLR != op)
     ) {
         Serial.print(F("ERR: op"));
-        Serial.print(op);
+        _print_op(op);
         Serial.println(F(" should not expect reply, and require data argument"));
         g_enc_err = ENC_ERR_OP;
         return;
     }
 
     if(
-        (arg & SPRD_MASK) & (
-            (ENC28J60_BIT_FIELD_SET == op)
-            || (ENC28J60_BIT_FIELD_CLR == op)
-        )
+        (arg & SPRD_MASK)
+        && ((ENC28J60_BIT_FIELD_SET == op) || (ENC28J60_BIT_FIELD_CLR == op))
     ) {
         Serial.print(F("ERR: op"));
-        Serial.print(op);
+        _print_op(op);
         Serial.println(F(" not available for MAC or MII registers"));
         g_enc_err = ENC_ERR_OP;
         return;
@@ -67,14 +177,8 @@ void enc_op_write(byte op, byte arg, byte data) {
         }
         _endTransaction();
 
-        #if REPEAT_BREAKPOINTS
-        if (SOMETIMES_PRINT_COND)
-        #else
-        if (DEBUG_OP_RW)
-        #endif
-        {
-            Serial.print(F("SPCR is 0x"));
-            Serial.print(SPCR, HEX);
+        if (g_enc_debug_io && (SOMETIMES_PRINT_COND || !g_enc_repeat_breakpoints)) {
+            DEBUG_PREFIX;
             if(ENC28J60_WRITE_CTRL_REG == op) {
                 Serial.print(F(" | writing 0x"));
             }
@@ -86,18 +190,14 @@ void enc_op_write(byte op, byte arg, byte data) {
             }
             Serial.print(data, HEX);
             Serial.print(F(" in arg "));
-            Serial.print(arg & ADDR_MASK, HEX);
+            _print_arg(arg);
             Serial.print(F(" with "));
-            Serial.println(op, HEX);
+            _print_op(op);
+            Serial.println();
             SOMETIMES_PRINT_END;
         }
-    }
-    #if REPEAT_BREAKPOINTS
-        while (!Serial.available());
-        while (Serial.available()){Serial.read();delay(1);}
-    #else
-        while (0);
-    #endif
+    } while(g_enc_repeat_breakpoints && !Serial.available());
+    if(g_enc_repeat_breakpoints) while (Serial.available()){Serial.read();delay(1);}
 
     byte * cache = NULL;
 
@@ -124,7 +224,7 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
         (ENC28J60_READ_BUF_MEM != op)
     ) {
         Serial.print(F("ERR: op"));
-        Serial.print(op);
+        _print_op(op);
         Serial.println(F(" should expect reply and require data argument"));
         g_enc_err = ENC_ERR_OP;
         return 0;
@@ -140,36 +240,21 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
         // clock in response
         result = _spiRead();
         _endTransaction();
-
-        #if REPEAT_BREAKPOINTS
-        if (SOMETIMES_PRINT_COND)
-        #else
-        if (DEBUG_OP_RW)
-        #endif
-        {
-            Serial.print(F("SPCR is 0x"));
-            Serial.print(SPCR, HEX);
+        if (g_enc_debug_io && (SOMETIMES_PRINT_COND || !g_enc_repeat_breakpoints)) {
+            DEBUG_PREFIX;
             Serial.print(F(" | reading 0x"));
             Serial.print(result, HEX);
             Serial.print(F(" from arg "));
-            Serial.print(arg & ADDR_MASK, HEX);
+            _print_arg(arg);
             Serial.print(F(" with "));
-            Serial.println(op, HEX);
+            _print_op(op);
+            Serial.println();
             SOMETIMES_PRINT_END;
         }
-    }
-    #if REPEAT_BREAKPOINTS
-        while (!Serial.available());
-        while (Serial.available()){Serial.read();delay(1);}
-    #else
-        while (0);
-    #endif
+    } while(g_enc_repeat_breakpoints && !Serial.available());
+    if(g_enc_repeat_breakpoints) while (Serial.available()){Serial.read();delay(1);}
 
-    byte * cache = NULL;
-
-    if (arg == ECON1) {
-        cache = &g_enc_reg_econ1;
-    }
+    byte * cache = _get_cache(arg);
 
     if(cache) {
         if (ENC28J60_READ_CTRL_REG == op) {
@@ -235,9 +320,8 @@ void enc_bank_sel(byte reg) {
     // Serial.println(econ1, HEX);
 
     if ((ECON1_BSEL_MASK & (g_enc_reg_econ1 ^ bsel))) {
-        if (DEBUG_OP_RW) {
-            Serial.print(F("SPCR is 0x"));
-            Serial.print(SPCR, HEX);
+        if (g_enc_debug_io) {
+            DEBUG_PREFIX;
             Serial.print(F(" | changing bank from "));
             Serial.print(g_enc_reg_econ1 & ECON1_BSEL_MASK, HEX);
             Serial.print(F(" to "));
@@ -351,6 +435,13 @@ void enc_read_buf(byte * data, uint8_t len) {
         if(data) {data[i] = result;}
     }
     _endTransaction();
+
+    if(g_enc_debug_io){
+        DEBUG_PREFIX;
+        Serial.print(F(" | reading "));
+        Serial.print(len);
+        Serial.println(F(" bytes from buffer "));
+    }
 }
 
 /**
@@ -362,6 +453,11 @@ byte enc_read_buf_b() {
     _spiWrite(ENC28J60_READ_BUF_MEM);
     result = _spiRead();
     _endTransaction();
+
+    if(g_enc_debug_io) {
+        DEBUG_PREFIX;
+        Serial.println(F(" | reading 1 byte from buffer"));
+    }
     return result;
 }
 
@@ -375,6 +471,12 @@ uint16_t enc_read_buf_w() {
     word.lsb = _spiRead();
     word.msb = _spiRead();
     _endTransaction();
+
+    if(g_enc_debug_io) {
+        DEBUG_PREFIX;
+        Serial.println(F(" | reading 1 word from buffer"));
+    }
+
     return word.val;
 }
 
@@ -620,25 +722,21 @@ void enc_hw_disable() {
     enc_bit_clr(ECON1, ECON1_RXEN);
 }
 
-void enc_reg_print(String name, byte reg) {
-    byte result;
-    result = enc_read_reg(reg);
-    Serial.print(name);
-    Serial.print(F(": 0x"));
+void enc_reg_print(byte reg) {
+    byte result = enc_read_reg(reg);
+    Serial.print(F("0x"));
     if (result<0x10) {Serial.print(0);}
-    Serial.println(result, HEX);
+    Serial.print(result, HEX);
 }
 
-void enc_regs_print(String name, byte reg, int n_regs) {
+void enc_regs_print(byte reg, int n_regs) {
     byte result;
-    Serial.print(name);
-    Serial.print(F(": 0x"));
+    Serial.print(F("0x"));
     for(int i=n_regs-1; i>=0; i--) {
         result = enc_read_reg(reg + (byte)(i));
         if (result<0x10) {Serial.print(0);}
         Serial.print(result, HEX);
     }
-    Serial.println();
 }
 
 void enc_peek_buf(int offset, int len) {
@@ -650,15 +748,15 @@ void enc_peek_buf(int offset, int len) {
     }
 
     uint16_t old_erdpt = enc_read_regw(ERDPTL);
-    enc_write_regw(ERDPTL, _buffer_sum(old_erdpt, offset));
-    enc_read_buf(g_enc_eth_frame_buf, len);
-    if( DEBUG_ETH ) {
-        for( int i=0; i<len; i++){
-            if(g_enc_eth_frame_buf[i]<0x10) Serial.print(0);
-            Serial.print(g_enc_eth_frame_buf[i], HEX);
-        }
-        Serial.println();
+    if(offset) {
+        enc_write_regw(ERDPTL, _buffer_sum(old_erdpt, offset));
     }
+    enc_read_buf(g_enc_eth_frame_buf, len);
+    for( int i=0; i<len; i++){
+        if(g_enc_eth_frame_buf[i]<0x10) Serial.print(0);
+        Serial.print(g_enc_eth_frame_buf[i], HEX);
+    }
+    Serial.println();
     enc_write_regw(ERDPTL, old_erdpt);
 }
 
@@ -728,13 +826,19 @@ void _enc_dump_pkt(int bcnt) {
     }
     g_enc_series = enc_read_buf_b();
     bcnt -= 1;
-    enc_peek_buf(0, bcnt);
+    if( DEBUG_ETH ) {
+        enc_peek_buf(0, bcnt);
+    }
 }
 
 /**
  * Consumes a packet
  */
 void consume_packet() {
+    if(DEBUG_ETH_BASIC) {
+        Serial.print(F("Freeing packet, advancing to 0x"));
+        Serial.println(g_enc_npp, HEX);
+    }
     enc_write_regw(ERDPTL, g_enc_npp);
     enc_write_regw(ERXRDPTL, _erxrdpt_workaround(g_enc_npp, RXSTART_INIT, RXSTOP_INIT));
     enc_bit_set(ECON2, ECON2_PKTDEC);
@@ -789,27 +893,112 @@ void enc_peek_npp_rsv_pkt() {
 
 void enc_regs_debug() {
     Serial.println(F("\nHwRevID:\n------"));
-    enc_reg_print("\nEREVID", EREVID);
+    Serial.print(F("\nEREVID: ")); enc_reg_print(EREVID); Serial.println();
     Serial.println(F("Cntrl:\n-----"));
-    enc_reg_print("ECON1", ECON1);
-    enc_reg_print("ECON2", ECON2);
-    enc_reg_print("ESTAT", ESTAT);
-    enc_reg_print("EIR", EIR);
-    enc_reg_print("EIE", EIE);
+    Serial.print(F("ECON1: ")); enc_reg_print(ECON1); Serial.println();
+    if(g_enc_reg_econ1) {
+        Serial.print(F(" -> "));
+        if(g_enc_reg_econ1 & ECON1_TXRST) Serial.print(F("TXRST "));
+        if(g_enc_reg_econ1 & ECON1_RXRST) Serial.print(F("RXRST "));
+        if(g_enc_reg_econ1 & ECON1_DMAST) Serial.print(F("DMAST "));
+        if(g_enc_reg_econ1 & ECON1_CSUMEN) Serial.print(F("CSUMEN "));
+        if(g_enc_reg_econ1 & ECON1_TXRTS) Serial.print(F("TXRTS "));
+        if(g_enc_reg_econ1 & ECON1_RXEN) Serial.print(F("RXEN "));
+        if(g_enc_reg_econ1 & ECON1_BSEL1) Serial.print(F("BSEL1 "));
+        if(g_enc_reg_econ1 & ECON1_BSEL0) Serial.print(F("BSEL0 "));
+        Serial.println();
+    }
+    Serial.print(F("ECON2: ")); enc_reg_print(ECON2); Serial.println();
+    if(g_enc_reg_econ2) {
+        Serial.print(F(" -> "));
+        if(g_enc_reg_econ2 & ECON2_AUTOINC) Serial.print(F("AUTOINC "));
+        if(g_enc_reg_econ2 & ECON2_PKTDEC) Serial.print(F("PKTDEC "));
+        if(g_enc_reg_econ2 & ECON2_PWRSV) Serial.print(F("PWRSV "));
+        if(g_enc_reg_econ2 & ECON2_VRPS) Serial.print(F("VRPS "));
+        Serial.println();
+    }
+    Serial.print(F("ESTAT: ")); enc_reg_print(ESTAT); Serial.println();
+    if(g_enc_reg_estat) {
+        Serial.print(F(" -> "));
+        if(g_enc_reg_estat & ESTAT_INT) Serial.print(F("INT "));
+        if(g_enc_reg_estat & ESTAT_LATECOL) Serial.print(F("LATECOL "));
+        if(g_enc_reg_estat & ESTAT_RXBUSY) Serial.print(F("RXBUSY "));
+        if(g_enc_reg_estat & ESTAT_TXABRT) Serial.print(F("TXABRT "));
+        if(g_enc_reg_estat & ESTAT_CLKRDY) Serial.print(F("CLKRDY "));
+        Serial.println();
+    }
+    Serial.print(F("EIR: ")); enc_reg_print(EIR); Serial.println();
+    if(g_enc_reg_eir) {
+        Serial.print(F(" -> "));
+        if(g_enc_reg_eir & EIR_PKTIF) Serial.print(F("PKTIF "));
+        if(g_enc_reg_eir & EIR_DMAIF) Serial.print(F("DMAIF "));
+        if(g_enc_reg_eir & EIR_LINKIF) Serial.print(F("LINKIF "));
+        if(g_enc_reg_eir & EIR_TXIF) Serial.print(F("TXIF "));
+        if(g_enc_reg_eir & EIR_TXERIF) Serial.print(F("TXERIF "));
+        if(g_enc_reg_eir & EIR_RXERIF) Serial.print(F("RXERIF "));
+        Serial.println();
+    }
+    Serial.print(F("EIE: ")); enc_reg_print(EIE); Serial.println();
+    if(g_enc_reg_eie) {
+        Serial.print(F(" -> "));
+        if(g_enc_reg_eie & EIE_INTIE) Serial.print(F("INTIE "));
+        if(g_enc_reg_eie & EIE_PKTIE) Serial.print(F("PKTIE "));
+        if(g_enc_reg_eie & EIE_DMAIE) Serial.print(F("DMAIE "));
+        if(g_enc_reg_eie & EIE_LINKIE) Serial.print(F("LINKIE "));
+        if(g_enc_reg_eie & EIE_TXIE) Serial.print(F("TXIE "));
+        if(g_enc_reg_eie & EIE_TXERIE) Serial.print(F("TXERIE "));
+        if(g_enc_reg_eie & EIE_RXERIE) Serial.print(F("RXERIE "));
+        Serial.println();
+    }
+    Serial.print(F("ERDPT: ")); enc_regs_print(ERDPTL, 2); Serial.println();
+
     Serial.println(F("\nMAC:\n-----"));
-    enc_reg_print("MACON1", MACON1);
-    enc_reg_print("MACON3", MACON3);
-    enc_reg_print("MACON4", MACON4);
+    Serial.print(F("MACON1: ")); enc_reg_print(MACON1); Serial.println();
+    if(g_enc_reg_macon1) {
+        Serial.print(F(" -> "));
+        if(g_enc_reg_macon1 & MACON1_LOOPBK) Serial.print(F("LOOPBK "));
+        if(g_enc_reg_macon1 & MACON1_TXPAUS) Serial.print(F("TXPAUS "));
+        if(g_enc_reg_macon1 & MACON1_RXPAUS) Serial.print(F("RXPAUS "));
+        if(g_enc_reg_macon1 & MACON1_PASSALL) Serial.print(F("PASSALL "));
+        if(g_enc_reg_macon1 & MACON1_MARXEN) Serial.print(F("MARXEN "));
+        Serial.println();
+    }
+    Serial.print(F("MACON3: ")); enc_reg_print(MACON3); Serial.println();
+    if(g_enc_reg_macon3) {
+        Serial.print(F(" -> "));
+        if(g_enc_reg_macon3 & MACON3_PADCFG2) Serial.print(F("PADCFG2 "));
+        if(g_enc_reg_macon3 & MACON3_PADCFG1) Serial.print(F("PADCFG1 "));
+        if(g_enc_reg_macon3 & MACON3_PADCFG0) Serial.print(F("PADCFG0 "));
+        if(g_enc_reg_macon3 & MACON3_TXCRCEN) Serial.print(F("TXCRCEN "));
+        if(g_enc_reg_macon3 & MACON3_PHDRLEN) Serial.print(F("PHDRLEN "));
+        if(g_enc_reg_macon3 & MACON3_HFRMLEN) Serial.print(F("HFRMLEN "));
+        if(g_enc_reg_macon3 & MACON3_FRMLNEN) Serial.print(F("FRMLNEN "));
+        if(g_enc_reg_macon3 & MACON3_FULDPX) Serial.print(F("FULDPX "));
+        Serial.println();
+    }
+    Serial.print(F("MACON4: ")); enc_reg_print(MACON4); Serial.println();
     Serial.println(F("\nRX:\n-----"));
-    enc_regs_print("ERXSTH:ERXSTL", ERXSTL, 2);
-    enc_regs_print("ERXNDH:ERXNDL", ERXNDL, 2);
-    enc_regs_print("ERXWRPTH:ERXWRPTL", ERXWRPTL, 2);
-    enc_regs_print("ERXRDPTH:ERXRDPTL", ERXRDPTL, 2);
-    enc_reg_print("ERXFCON", ERXFCON);
-    enc_reg_print("EPKTCNT", EPKTCNT);
-    enc_regs_print("MAMXFLH:MAMXFLL", MAMXFLL, 2);
+    Serial.print(F("ERXST: ")); enc_regs_print(ERXSTL, 2); Serial.println();
+    Serial.print(F("ERXND: ")); enc_regs_print(ERXNDL, 2); Serial.println();
+    Serial.print(F("ERXWRPT: ")); enc_regs_print(ERXWRPTL, 2); Serial.println();
+    Serial.print(F("ERXRDPT: ")); enc_regs_print(ERXRDPTL, 2); Serial.println();
+    Serial.print(F("ERXFCON: ")); enc_reg_print(ERXFCON); Serial.println();
+    if(g_enc_reg_erxfcon) {
+        Serial.print(F(" -> "));
+        if(g_enc_reg_erxfcon & ERXFCON_UCEN) Serial.print(F("UCEN "));
+        if(g_enc_reg_erxfcon & ERXFCON_ANDOR) Serial.print(F("ANDOR "));
+        if(g_enc_reg_erxfcon & ERXFCON_CRCEN) Serial.print(F("CRCEN "));
+        if(g_enc_reg_erxfcon & ERXFCON_PMEN) Serial.print(F("PMEN "));
+        if(g_enc_reg_erxfcon & ERXFCON_MPEN) Serial.print(F("MPEN "));
+        if(g_enc_reg_erxfcon & ERXFCON_HTEN) Serial.print(F("HTEN "));
+        if(g_enc_reg_erxfcon & ERXFCON_MCEN) Serial.print(F("MCEN "));
+        if(g_enc_reg_erxfcon & ERXFCON_BCEN) Serial.print(F("BCEN "));
+        Serial.println();
+    }
+    Serial.print(F("EPKTCNT: ")); enc_reg_print(EPKTCNT); Serial.println();
+    Serial.print(F("MAMXFL: ")); enc_regs_print(MAMXFLL, 2); Serial.println();
 
     Serial.println(F("\nTX:\n-----"));
-    enc_regs_print("ETXSTH:ETXSTL", ETXSTL, 2);
-    enc_regs_print("ETXNDH:ETXNDL", ETXNDL, 2);
+    Serial.print(F("ETXST: ")); enc_regs_print(ETXSTL, 2); Serial.println();
+    Serial.print(F("ETXND: ")); enc_regs_print(ETXNDL, 2); Serial.println();
 }

@@ -344,10 +344,13 @@
 #define MAC_BYTES 6
 #define ETH_HEADER_BYTES (MAC_BYTES * 2 + 2)
 
-#define REPEAT_BREAKPOINTS 0
 #define DEBUG_ETH 0
 #define DEBUG_ETH_BASIC 0
-#define DEBUG_OP_RW 0
+
+#define DEBUG_PREFIX \
+Serial.print(F(" | SPCR is 0x")); \
+Serial.print(SPCR, HEX)
+
 
 
 void enc_op_write(byte op, byte arg, byte data);
@@ -365,8 +368,8 @@ void enc_read_buf(byte * data, uint8_t len);
 byte enc_read_buf_b();
 uint16_t enc_read_buf_w();
 void enc_set_mac_addr(byte * mac_addr);
-void enc_reg_print(String name, byte reg);
-void enc_regs_print(String name, byte reg, int n_regs);
+void enc_reg_print(byte reg);
+void enc_regs_print(byte reg, int n_regs);
 void enc_regs_debug();
 int enc_hw_init();
 void enc_hw_enable();
@@ -377,7 +380,7 @@ void _enc_refresh_rsv_globals();
 void _enc_print_rxstat(uint16_t rxstat);
 uint16_t _erxrdpt_workaround(uint16_t erxrdpt, uint16_t start, uint16_t end);
 uint16_t _buffer_sum(int start, int offset);
-void consume_packet();
+void free_packet();
 
 extern uint16_t g_enc_npp;
 extern uint16_t g_enc_rxstat;
@@ -386,6 +389,8 @@ extern uint16_t g_enc_rxbcnt;
 extern byte * g_enc_eth_frame_buf;
 extern byte g_enc_series;
 extern long g_enc_pkts_consumed;
+extern bool g_enc_repeat_breakpoints;
+extern bool g_enc_debug_io;
 
 enum enc_err{
     ENC_NO_ERR,

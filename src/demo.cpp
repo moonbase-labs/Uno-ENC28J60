@@ -357,6 +357,12 @@ void demo_mac_interference() {
 void demo_receive() {
     enc_hw_init();
 
+    // do {} while (!Serial.available());
+    // while (Serial.available()){Serial.read();delay(1);}
+    // return;
+
+    enc_regs_debug();
+
     // Enable interrupt on receive packet
 
     // Set MAC Addr
@@ -416,6 +422,13 @@ void demo_receive() {
 
         old_erdpt = enc_read_regw(ERDPTL);
 
+        if(DEBUG_ETH){
+            Serial.print(F("buffer at 0x"));
+            Serial.print(old_erdpt, HEX);
+            Serial.println(F(": "));
+            enc_peek_buf(0, 100);
+        }
+
         dump_packet = true;
 
         if( DEBUG_ETH_BASIC & SOMETIMES_PRINT_COND) {
@@ -436,12 +449,12 @@ void demo_receive() {
 
         /* TODO: move this to separate validation function? */
 
-        if( DEBUG_ETH ) {
-            Serial.print(F("next packet: 0x"));
-            Serial.println(g_enc_npp, HEX);
-            Serial.print(F("rxbcnt: "));
-            Serial.println(g_enc_rxbcnt);
-        }
+        // if( DEBUG_ETH ) {
+        //     Serial.print(F("next packet: 0x"));
+        //     Serial.println(g_enc_npp, HEX);
+        //     Serial.print(F("rxbcnt: "));
+        //     Serial.println(g_enc_rxbcnt);
+        // }
 
         if(RSV_GETBIT(g_enc_rxstat, RSV_ZERO)) {
             Serial.println(F("RXSTAT corrupt, resetting"));
@@ -557,15 +570,20 @@ void demo_receive() {
         float pps = (float)(1000.0 * g_enc_pkts_consumed) / (float)(probe_timer());
 
         // print summary
-        Serial.print(F("SER:"));
-        if(g_enc_series<0x10) Serial.print(0);
-        Serial.print(g_enc_series,HEX);
-        Serial.print(F(" CNT:"));
-        if(epktcnt<0x10) Serial.print(0);
-        Serial.print(epktcnt,HEX);
-        Serial.print(F(" PPS:"));
-        Serial.print(pps,HEX);
-        Serial.println();
+
+        if( SOMETIMES_PRINT_COND) {
+            float pps = (float)(1000.0 * g_enc_pkts_consumed) / (float)(probe_timer());
+            Serial.print(F("SER:"));
+            if(g_enc_series<0x10) Serial.print(0);
+            Serial.print(g_enc_series,HEX);
+            Serial.print(F(" CNT:"));
+            if(epktcnt<0x10) Serial.print(0);
+            Serial.print(epktcnt,HEX);
+            Serial.print(F(" PPS:"));
+            Serial.print(pps,HEX);
+            Serial.println();
+            SOMETIMES_PRINT_END;
+        }
 
     } while (1);
 
