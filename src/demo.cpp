@@ -548,14 +548,14 @@ void demo_receive() {
         g_enc_series = enc_read_buf_b();
 
         if(DEBUG_ETH_BASIC) {
-            Serial.print(F("series: "));
-            Serial.println(g_enc_series, HEX);
+            Serial.println(g_enc_sequence, HEX);
+            Serial.print(F("rxbcnt: "));
+            Serial.println(g_enc_rxbcnt, HEX);
         }
 
         if((prev_series > g_enc_series) && (prev_series - g_enc_series < 0x10)) {
             dump_packet = false;
         }
-
 
         if(dump_packet) enc_read_buf(0, g_enc_rxbcnt - 1);
 

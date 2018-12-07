@@ -439,7 +439,7 @@ void enc_bit_clr(byte reg, byte bits) {
 /**
  * Write to the buffer
  */
-void enc_write_buf(byte * data, uint8_t len) {
+void enc_write_buf(byte * data, int len) {
     _beginTransaction(spiSettings);
     _spiWrite(ENC28J60_WRITE_BUF_MEM);
     for(uint8_t i=0; i<len; i++){
@@ -448,11 +448,11 @@ void enc_write_buf(byte * data, uint8_t len) {
     _endTransaction();
 }
 
-void enc_read_buf(byte * data, uint8_t len) {
+void enc_read_buf(byte * data, int len) {
     _beginTransaction(spiSettings);
     _spiWrite(ENC28J60_READ_BUF_MEM);
     byte result;
-    for(uint8_t i=0; i<len; i++){
+    for(int i=0; i<len; i++){
         result = _spiRead();
         if(data) {data[i] = result;}
     }
@@ -463,6 +463,11 @@ void enc_read_buf(byte * data, uint8_t len) {
         Serial.print(F(" | reading "));
         Serial.print(len);
         Serial.println(F(" bytes from buffer "));
+
+        if(DEBUG_ETH && data) for(int i=0; i<len; i++){
+            if (data[i] < 0x10) Serial.print(0);
+            Serial.print(data[i]);
+        }
     }
 }
 
