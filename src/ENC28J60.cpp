@@ -17,6 +17,14 @@ uint16_t g_enc_rxbcnt = 0;
 enc_err g_enc_err = ENC_NO_ERR;
 byte g_enc_series = 0;
 byte g_enc_reg_econ1 = 0;
+byte g_enc_reg_econ2 = 0;
+byte g_enc_reg_estat = 0;
+byte g_enc_reg_eir = 0;
+byte g_enc_reg_eie = 0;
+byte g_enc_reg_macon1 = 0;
+byte g_enc_reg_macon3 = 0;
+byte g_enc_reg_macon4 = 0;
+byte g_enc_reg_erxfcon = 0;
 long g_enc_pkts_consumed = 0;
 bool g_enc_repeat_breakpoints = false;
 bool g_enc_debug_io = false;
@@ -24,6 +32,21 @@ bool g_enc_debug_io = false;
 inline byte _first_byte(byte op, byte arg) {
     // assembe first byte in operation from opcode and argument
     return op | (arg & ADDR_MASK);
+}
+
+byte * _get_cache(byte arg) {
+    switch(arg) {
+        case ECON1: return &g_enc_reg_econ1;
+        case ECON2: return &g_enc_reg_econ2;
+        case ESTAT: return &g_enc_reg_estat;
+        case EIR: return &g_enc_reg_eir;
+        case EIE: return &g_enc_reg_eie;
+        case MACON1: return &g_enc_reg_macon1;
+        case MACON3: return &g_enc_reg_macon3;
+        case MACON4: return &g_enc_reg_macon4;
+        case ERXFCON: return &g_enc_reg_erxfcon;
+        default: return NULL;
+    }
 }
 
 void _print_op(byte op) {
@@ -199,21 +222,19 @@ void enc_op_write(byte op, byte arg, byte data) {
     } while(g_enc_repeat_breakpoints && !Serial.available());
     if(g_enc_repeat_breakpoints) while (Serial.available()){Serial.read();delay(1);}
 
-    byte * cache = NULL;
-
-    if (arg == ECON1) {
-        cache = &g_enc_reg_econ1;
-    }
+    byte * cache = _get_cache(arg);
 
     if(cache) {
-        if (ENC28J60_WRITE_CTRL_REG == op) {
-            *cache = data;
-        } else if (ENC28J60_BIT_FIELD_SET == op) {
-            *cache |= data;
-        } else if (ENC28J60_BIT_FIELD_CLR == op) {
-            *cache ^= data;
+        switch(op) {
+            case ENC28J60_WRITE_CTRL_REG: *cache = data; break;
+            case ENC28J60_BIT_FIELD_SET: *cache |= data; break;
+            case ENC28J60_BIT_FIELD_CLR:  *cache ^= data; break;
         }
     }
+
+    // do {} while (!Serial.available());
+    // while (Serial.available()){Serial.read();delay(1);}
+
 }
 
 byte enc_op_read(uint8_t op, uint8_t arg) {
@@ -257,10 +278,11 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
     byte * cache = _get_cache(arg);
 
     if(cache) {
-        if (ENC28J60_READ_CTRL_REG == op) {
-            *cache = result;
-        }
+        if (ENC28J60_READ_CTRL_REG == op) *cache = result;
     }
+
+    // do {} while (!Serial.available());
+    // while (Serial.available()){Serial.read();delay(1);}
 
     return result;
 }
@@ -315,7 +337,7 @@ void enc_bank_sel(byte reg) {
     }
 
     byte bsel = (reg & BANK_MASK) >> 5;
-    // g_enc_reg_econ1 = enc_op_read(ENC28J60_READ_CTRL_REG, ECON1);
+    g_enc_reg_econ1 = enc_op_read(ENC28J60_READ_CTRL_REG, ECON1);
     // Serial.print(F("ECON1: 0x"));
     // Serial.println(econ1, HEX);
 
@@ -605,7 +627,7 @@ int enc_hw_init() {
 	 * damaged
 	 */
 	reg = enc_read_reg(EREVID);
-	if (reg == 0x00 || reg == 0xff) {
+	if (reg == 0x00 || reg == 0xff || g_enc_err > 0) {
 		return 0;
 	}
 
@@ -834,7 +856,7 @@ void _enc_dump_pkt(int bcnt) {
 /**
  * Consumes a packet
  */
-void consume_packet() {
+void free_packet() {
     if(DEBUG_ETH_BASIC) {
         Serial.print(F("Freeing packet, advancing to 0x"));
         Serial.println(g_enc_npp, HEX);
