@@ -658,6 +658,8 @@ int enc_hw_init() {
     reg |= ERXFCON_CRCEN; // AND crc valid
     enc_write_reg(ERXFCON, reg);
 
+    // Serial.print(F("ERXFCON: ")); enc_reg_print(ERXFCON); Serial.println();
+
 	/* enable MAC receive, TX/RX Pause = 0x0d */
     reg = 0x00;
     reg |= MACON1_MARXEN; // Enable MAC to recieve frames
@@ -665,8 +667,9 @@ int enc_hw_init() {
     reg |= MACON1_RXPAUS; // Allow IEEE defined flow control to function
 	enc_write_reg(MACON1, reg);
 
-    enc_reg_print("MACON1 should be 0x0d", MACON1);
-    enc_reg_print("MACON3", MACON3);
+    // Serial.print(F("MACON1 should be 0x0d: ")); enc_reg_print(MACON1); Serial.println();
+    // Serial.print(F("MACON3: ")); enc_reg_print(MACON3); Serial.println();
+    // Serial.print(F("ERXFCON: ")); enc_reg_print(ERXFCON); Serial.println();
 
 	/* enable automatic padding and CRC operations */
 	if (FULL_DUPLEX) {
@@ -700,8 +703,8 @@ int enc_hw_init() {
 		enc_write_reg(MABBIPG, 0x12);
 	}
 
-    enc_reg_print("MACON1 should be 0x0d", MACON1);
-    enc_reg_print("MACON3", MACON3);
+    // Serial.print(F("MACON1 should be 0x0d: ")); enc_reg_print(MACON1); Serial.println();
+    // Serial.print(F("MACON3: ")); enc_reg_print(MACON3); Serial.println();
 
 	/*
 	 * MACLCON1 (default)
