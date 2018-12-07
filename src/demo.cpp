@@ -373,7 +373,6 @@ void demo_receive() {
     // Determines whether packet is dumped onto LEDs
     bool dump_packet;
 
-    byte prev_sequence;
 
     enc_hw_enable();
 
@@ -383,6 +382,8 @@ void demo_receive() {
         // delay(100);
         // g_enc_repeat_breakpoints = false;
         // g_enc_debug_io = false;
+
+        uint16_t prev_sequence;
 
         prev_sequence = g_enc_sequence;
         if(g_enc_err) {
@@ -558,7 +559,10 @@ void demo_receive() {
             (prev_sequence > g_enc_sequence)
             && (prev_sequence - g_enc_sequence < (MAX_SEQUENCE / 2))
         ) {
-            Serial.println(F("out of order! "));
+            Serial.print(F("out of order! prev: "));
+            print_hex_word(prev_sequence);
+            Serial.print(", this: ");
+            println_hex_word(g_enc_sequence);
             dump_packet = false;
         }
 
@@ -575,7 +579,7 @@ void demo_receive() {
             Serial.print(F(" CNT:"));
             print_hex_byte(epktcnt);
             Serial.print(F(" PPS:"));
-            print_hex_byte(pps);
+            Serial.print(pps);
             Serial.println();
             SOMETIMES_PRINT_END;
         }
