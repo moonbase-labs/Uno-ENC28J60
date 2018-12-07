@@ -373,7 +373,7 @@ void demo_receive() {
     // Determines whether packet is dumped onto LEDs
     bool dump_packet;
 
-    byte prev_series;
+    byte prev_sequence;
 
     enc_hw_enable();
 
@@ -384,7 +384,7 @@ void demo_receive() {
         // g_enc_repeat_breakpoints = false;
         // g_enc_debug_io = false;
 
-        prev_series = g_enc_series;
+        prev_sequence = g_enc_sequence;
         if(g_enc_err) {
             enc_regs_debug();
             Serial.print(F("ERROR, resetting "));
@@ -545,15 +545,19 @@ void demo_receive() {
             2 + RSV_LEN + ETH_HEADER_BYTES
         ));
 
-        g_enc_series = enc_read_buf_b();
+        g_enc_sequence = enc_read_buf_b();
 
         if(DEBUG_ETH_BASIC) {
+            Serial.print(F("sequence: "));
             Serial.println(g_enc_sequence, HEX);
             Serial.print(F("rxbcnt: "));
             Serial.println(g_enc_rxbcnt, HEX);
         }
 
-        if((prev_series > g_enc_series) && (prev_series - g_enc_series < 0x10)) {
+        if(
+            (prev_sequence > g_enc_sequence)
+            && (prev_sequence - g_enc_sequence < (MAX_SEQUENCE / 2))
+        ) {
             dump_packet = false;
         }
 
@@ -566,8 +570,8 @@ void demo_receive() {
         if( SOMETIMES_PRINT_COND) {
             float pps = (float)(1000.0 * g_enc_pkts_consumed) / (float)(probe_timer());
             Serial.print(F("SER:"));
-            if(g_enc_series<0x10) Serial.print(0);
-            Serial.print(g_enc_series,HEX);
+            if(g_enc_sequence<0x10) Serial.print(0);
+            Serial.print(g_enc_sequence,HEX);
             Serial.print(F(" CNT:"));
             if(epktcnt<0x10) Serial.print(0);
             Serial.print(epktcnt,HEX);

@@ -15,7 +15,7 @@ uint16_t g_enc_npp = RXSTART_INIT;
 uint16_t g_enc_rxstat = 0;
 uint16_t g_enc_rxbcnt = 0;
 enc_err g_enc_err = ENC_NO_ERR;
-byte g_enc_series = 0;
+byte g_enc_sequence = 0;
 byte g_enc_reg_econ1 = 0;
 byte g_enc_reg_econ2 = 0;
 byte g_enc_reg_estat = 0;
@@ -854,7 +854,7 @@ void _enc_dump_pkt(int bcnt) {
         Serial.print(F("-> (bcnt remaining): "));
         Serial.println(bcnt);
     }
-    g_enc_series = enc_read_buf_b();
+    g_enc_sequence = enc_read_buf_b();
     bcnt -= 1;
     if( DEBUG_ETH ) {
         enc_peek_buf(0, bcnt);
