@@ -580,9 +580,9 @@ int _bounded_distance(int from, int to, int bst, int bnd) {
         return 0;
     }
     if(from >= to) {
-        return (from - to);
+        return (bnd - bst - 1) + (to - from);
     } else {
-        return (bnd - bst) + (from - to);
+        return (to - from);
     }
 }
 
@@ -603,7 +603,7 @@ int _bounded_sum(int start, int offset, int bst, int bnd) {
         return 0;
     }
 
-    return bst + ( (start - bst + offset) % (bst - bnd) );
+    return bst + ( (start - bst + offset) % (bst - bnd - 1) );
 }
 
 /**

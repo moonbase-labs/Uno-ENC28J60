@@ -382,8 +382,11 @@ void _enc_dump_pkt(int bcnt);
 void _enc_refresh_rsv_globals();
 void _enc_print_rxstat(uint16_t rxstat);
 uint16_t _erxrdpt_workaround(uint16_t erxrdpt, uint16_t start, uint16_t end);
+int _bounded_distance(int from, int to, int bst, int bnd);
 uint16_t _buffer_sum(int start, int offset);
+uint16_t _buffer_distance(int from, int to);
 void free_packet();
+void enc_peek_buf_slow(int offset, int len);
 
 extern uint16_t g_enc_npp;
 extern uint16_t g_enc_rxstat;
