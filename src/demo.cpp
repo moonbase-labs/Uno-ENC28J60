@@ -372,10 +372,18 @@ void demo_receive() {
     uint16_t old_erdpt;
     bool dump_packet;
 
-    // do {} while (!Serial.available());
-    // while (Serial.available()){Serial.read();delay(1);}
+    byte prev_series;
+
+    enc_hw_enable();
+
+    // g_enc_debug_io = true;
 
     do {
+        // delay(100);
+        // g_enc_repeat_breakpoints = false;
+        // g_enc_debug_io = false;
+
+        prev_series = g_enc_series;
         if(g_enc_err) {
             enc_regs_debug();
             Serial.print(F("ERROR, resetting "));
@@ -540,34 +548,32 @@ void demo_receive() {
             break;
         }
 
-        if(dump_packet) {
-            // TODO: only dump what we care about
-
-
-            // if( DEBUG_ETH ) Serial.println(F("packet: "));
-            // _enc_dump_pkt(g_enc_rxbcnt);
-            // _enc_print_rxstat(g_enc_rxstat);
+        if( DEBUG_ETH ) {
+            Serial.println(F("packet: "));
+            _enc_dump_pkt(g_enc_rxbcnt);
+            _enc_print_rxstat(g_enc_rxstat);
             // enc_peek_buf(ETH_HEADER_BYTES, g_enc_rxbcnt-ETH_HEADER_BYTES);
-
-            enc_write_regw(ERDPTL, _buffer_sum(old_erdpt,
-                2 + RSV_LEN + ETH_HEADER_BYTES
-            ));
-
-            g_enc_series = enc_read_buf_b();
-
-            if(DEBUG_ETH_BASIC) {
-                Serial.print(F("series: "));
-                Serial.println(g_enc_series, HEX);
-            }
-
-            enc_read_buf(0, g_enc_rxbcnt - 1);
-
-            consume_packet();
-        } else {
-            enc_write_regw(ERDPTL, old_erdpt);
         }
 
-        float pps = (float)(1000.0 * g_enc_pkts_consumed) / (float)(probe_timer());
+        enc_write_regw(ERDPTL, _buffer_sum(old_erdpt,
+            2 + RSV_LEN + ETH_HEADER_BYTES
+        ));
+
+        g_enc_series = enc_read_buf_b();
+
+        if(DEBUG_ETH_BASIC) {
+            Serial.print(F("series: "));
+            Serial.println(g_enc_series, HEX);
+        }
+
+        if((prev_series > g_enc_series) && (prev_series - g_enc_series < 0x10)) {
+            dump_packet = false;
+        }
+
+
+        if(dump_packet) enc_read_buf(0, g_enc_rxbcnt - 1);
+
+        free_packet();
 
         // print summary
 
