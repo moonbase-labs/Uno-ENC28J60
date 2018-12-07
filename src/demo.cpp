@@ -392,7 +392,7 @@ void demo_receive() {
             break;
         }
 
-        enc_hw_enable();
+        // enc_hw_enable();
 
         if(digitalRead(INT_PIN) == HIGH){
             if (SOMETIMES_PRINT_COND & DEBUG_ETH) {
@@ -405,7 +405,7 @@ void demo_receive() {
             }
         }
 
-        enc_hw_disable();
+        // enc_hw_disable();
         // enc_regs_debug();
 
         byte epktcnt = enc_read_reg(EPKTCNT);
@@ -594,5 +594,7 @@ void demo_receive() {
         }
 
     } while (1);
+
+    enc_hw_disable();
 
 }
