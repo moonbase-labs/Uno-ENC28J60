@@ -540,9 +540,10 @@ void demo_receive() {
             // enc_peek_buf(ETH_HEADER_BYTES, g_enc_rxbcnt-ETH_HEADER_BYTES);
         }
 
-        enc_write_regw(ERDPTL, _buffer_sum(old_erdpt,
-            2 + RSV_LEN + ETH_HEADER_BYTES
-        ));
+        uint16_t data_start = _buffer_sum(old_erdpt, 2 + RSV_LEN + ETH_HEADER_BYTES);
+        uint16_t data_len = _buffer_distance(data_start, g_enc_npp);
+
+        enc_write_regw(ERDPTL, data_start);
 
         g_enc_sequence = enc_read_buf_w();
 
@@ -574,7 +575,17 @@ void demo_receive() {
             println_hex_word(g_enc_sequence);
         }
 
-        if(dump_packet) enc_read_buf(0, g_enc_rxbcnt - 1);
+        if(dump_packet) {
+            // if(DEBUG_ETH || 1) {
+            enc_read_buf(led_data, data_len);
+            if(DEBUG_LED) {
+                for(uint16_t i=0; i<50; i++) print_hex_byte(led_data[i]);
+                Serial.print(' ');
+            }
+
+            // }
+            // enc_read_buf(0, g_enc_rxbcnt - 1);
+        }
 
         free_packet();
 
