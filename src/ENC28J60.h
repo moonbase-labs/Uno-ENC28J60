@@ -347,6 +347,7 @@
 
 #define DEBUG_ETH 0
 #define DEBUG_ETH_BASIC 0
+#define DEBUG_LED 0
 
 // Maximum sequence number
 #define MAX_SEQUENCE 0xffff
