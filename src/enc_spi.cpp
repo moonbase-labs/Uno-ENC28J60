@@ -30,6 +30,7 @@ void spi_init() {
             |SPI_MODE
             // |(1<<SPR1)|(1<<SPR0); // SPI Clk divider = 128
         ;
+        SPSR &= SPI2X; // Clk Div = 2
     #endif
 
     digitalWrite(MOSI, LOW);
