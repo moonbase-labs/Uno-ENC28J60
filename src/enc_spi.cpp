@@ -7,8 +7,10 @@
  * SPI stuff
  * could have its own source file
  */
-SPISettings spiSettings;
 
+#ifdef USE_SPI_LIBRARY
+    SPISettings spiSettings;
+#endif
 
 /**
  * Initialize SPI

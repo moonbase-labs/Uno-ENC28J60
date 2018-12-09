@@ -189,7 +189,7 @@ void enc_op_write(byte op, byte arg, byte data) {
 
     do {
 
-        _beginTransaction(spiSettings);
+        _beginTransaction();
         _spiWrite(_first_byte(op, arg));
         _spiWrite(data);
         if(arg & SPRD_MASK) {
@@ -254,7 +254,7 @@ byte enc_op_read(uint8_t op, uint8_t arg) {
     byte result = 0x00;
 
     do {
-        _beginTransaction(spiSettings);
+        _beginTransaction();
         _spiWrite(_first_byte(op, arg));
         // handle dummy byte for certain RCRs
         if(arg & SPRD_MASK) _spiRead();
@@ -305,7 +305,7 @@ void enc_soft_reset() {
     enc_op_write(ENC28J60_BIT_FIELD_CLR, ECON2, ECON2_PWRSV);
     delayMicroseconds(600);
 
-    _beginTransaction(spiSettings);
+    _beginTransaction();
     _spiWrite(ENC28J60_SOFT_RESET);
     delayMicroseconds(RESET_DELAY);
     _endTransaction();
@@ -440,7 +440,7 @@ void enc_bit_clr(byte reg, byte bits) {
  * Write to the buffer
  */
 void enc_write_buf(byte * data, int len) {
-    _beginTransaction(spiSettings);
+    _beginTransaction();
     _spiWrite(ENC28J60_WRITE_BUF_MEM);
     for(uint8_t i=0; i<len; i++){
         _spiWrite(data[i]);
@@ -449,7 +449,7 @@ void enc_write_buf(byte * data, int len) {
 }
 
 void enc_read_buf(byte * data, int len) {
-    _beginTransaction(spiSettings);
+    _beginTransaction();
     _spiWrite(ENC28J60_READ_BUF_MEM);
     byte result;
     for(int i=0; i<len; i++){
@@ -476,7 +476,7 @@ void enc_read_buf(byte * data, int len) {
  */
 byte enc_read_buf_b() {
     byte result;
-    _beginTransaction(spiSettings);
+    _beginTransaction();
     _spiWrite(ENC28J60_READ_BUF_MEM);
     result = _spiRead();
     _endTransaction();
@@ -493,7 +493,7 @@ byte enc_read_buf_b() {
  */
 uint16_t enc_read_buf_w() {
     union {uint16_t val; struct {byte lsb, msb;};} word;
-    _beginTransaction(spiSettings);
+    _beginTransaction();
     _spiWrite(ENC28J60_READ_BUF_MEM);
     word.lsb = _spiRead();
     word.msb = _spiRead();

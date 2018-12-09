@@ -37,7 +37,9 @@
 
 #define waitspi() while(!(SPSR&(1<<SPIF)))
 
-extern SPISettings spiSettings;
+#ifdef USE_SPI_LIBRARY
+    extern SPISettings spiSettings;
+#endif
 
 inline void _changeSPIMode(byte mode) {
     delayMicroseconds(MODE_CHANGE_US);
@@ -45,7 +47,7 @@ inline void _changeSPIMode(byte mode) {
     delayMicroseconds(MODE_CHANGE_US);
 }
 
-inline void _beginTransaction(SPISettings spiSettings) {
+inline void _beginTransaction() {
 
     // digitalWrite(MOSI, LOW);
     // digitalWrite(SCK, LOW);
