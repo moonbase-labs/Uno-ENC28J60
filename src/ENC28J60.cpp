@@ -517,6 +517,18 @@ void enc_set_mac_addr(byte * mac_addr) {
     enc_write_reg(MAADR0, mac_addr[5]);
 }
 
+void enc_set_pattern_match(byte * pattern) {
+    /* NOTE: MAC address in ENC28J60 is byte-backward */
+    enc_write_reg(EPMM7, pattern[0]);
+    enc_write_reg(EPMM6, pattern[1]);
+    enc_write_reg(EPMM5, pattern[2]);
+    enc_write_reg(EPMM4, pattern[3]);
+    enc_write_reg(EPMM3, pattern[4]);
+    enc_write_reg(EPMM2, pattern[5]);
+    enc_write_reg(EPMM1, pattern[6]);
+    enc_write_reg(EPMM0, pattern[7]);
+}
+
 /*
  * Wait until the PHY operation is complete.
  */
