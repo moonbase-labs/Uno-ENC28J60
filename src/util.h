@@ -2,6 +2,17 @@
 #define ENC_UTIL_H
 
 #include <Arduino.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int freeMemory();
+
+#ifdef  __cplusplus
+}
+#endif
+
 /**
  * Debugging
  */
