@@ -557,7 +557,7 @@ void demo_receive() {
         dump_packet = true;
 
         if(
-            (prev_sequence > g_enc_sequence)
+            (prev_sequence >= g_enc_sequence)
             && (prev_sequence - g_enc_sequence < (MAX_SEQUENCE / 2))
         ) {
             Serial.print(F("out of order! prev: "));
