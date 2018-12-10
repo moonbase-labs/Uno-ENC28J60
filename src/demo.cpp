@@ -375,7 +375,7 @@ void demo_receive() {
         led_data = (byte *) malloc(led_buffer_size);
     } else {
         led_data = &g_enc_eth_frame_buf[
-            RSV_LEN + ETH_HEADER_BYTES + SEQ_BYTES
+            NPP_SIZE + RSV_LEN + ETH_HEADER_BYTES + SEQ_BYTES
         ];
     }
 
@@ -403,14 +403,15 @@ void demo_receive() {
 
     // g_enc_debug_io = true;
 
+    uint16_t prev_sequence = 0;
+
+
     do {
         // delay(100);
         // g_enc_repeat_breakpoints = false;
         // g_enc_debug_io = false;
 
-        uint16_t prev_sequence;
 
-        prev_sequence = *g_enc_sequence;
         if(g_enc_err) {
             enc_regs_debug();
             Serial.print(F("ERROR, resetting "));
@@ -565,7 +566,7 @@ void demo_receive() {
             // enc_peek_buf(ETH_HEADER_BYTES, *g_enc_rxbcnt-ETH_HEADER_BYTES);
         }
 
-        uint16_t data_start = _buffer_sum(old_erdpt, 2 + RSV_LEN + ETH_HEADER_BYTES);
+        uint16_t data_start = _buffer_sum(old_erdpt, NPP_SIZE + RSV_LEN + ETH_HEADER_BYTES);
         uint16_t data_len = _buffer_distance(data_start, *g_enc_npp);
 
         enc_write_regw(ERDPTL, data_start);
@@ -607,6 +608,8 @@ void demo_receive() {
                 for(uint16_t i=0; i<50; i++) print_hex_byte(led_data[i]);
                 Serial.print(' ');
             }
+
+            prev_sequence = *g_enc_sequence;
 
             // }
             // enc_read_buf(0, *g_enc_rxbcnt - 1);

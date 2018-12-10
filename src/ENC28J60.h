@@ -321,7 +321,6 @@
 //
 // max frame length which the conroller will accept:
 #define MAX_FRAMELEN        1500  // (0x05dc, note: maximum ethernet frame length would be 1518)
-#define RSV_LEN 4 // length of recieve status vector in bytes
 
 
 
@@ -341,7 +340,8 @@
 /**
  * Constants
  */
-
+#define NPP_SIZE 2 // length of buffer taken up by NPP
+#define RSV_LEN 4 // length of recieve status vector in bytes
 #define MAC_BYTES 6
 #define ETHERTYPE_BYTES 2
 #define ETH_HEADER_BYTES (MAC_BYTES + MAC_BYTES + ETHERTYPE_BYTES)

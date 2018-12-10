@@ -33,9 +33,27 @@ uint16_t * g_enc_rxbcnt = NULL;
  */
 uint16_t * g_enc_rxstat = NULL;
 /**
+ *  Store the ethernet header after the sixth byte in g_enc_eth_frame_buf
+ *  if possible
+ */
+byte * g_enc_eth_header = NULL;
+/**
+ *  Store the ethernet src hw addr within g_enc_eth_header
+ */
+byte * g_enc_eth_src = NULL;
+/**
+ *  Store the ethernet src hw addr within g_enc_eth_header
+ */
+byte * g_enc_eth_dst = NULL;
+/**
+ *  Store the ethernet src hw addr within g_enc_eth_header
+ */
+byte * g_enc_eth_type = NULL;
+
+/**
  *  The LED sequence number (used to determine if packets are sent out of order)
  */
-uint16_t * g_enc_sequence = 0;
+uint16_t * g_enc_sequence = NULL;
 
 /**
  *  If any errors happen in ENC functions, an error value is stored here
@@ -74,14 +92,22 @@ void enc_init() {
     if(g_enc_eth_frame_buf != NULL) {
         g_enc_rsv = g_enc_eth_frame_buf;
     } else {
-        g_enc_rsv = (byte *) malloc(RSV_SIZE * sizeof(byte));
+        g_enc_rsv = (byte *) malloc((NPP_SIZE + RSV_SIZE) * sizeof(byte));
     }
     g_enc_npp = (uint16_t *)g_enc_rsv;
-    g_enc_rxbcnt = (uint16_t *)(&g_enc_rsv[2]);
-    g_enc_rxstat = (uint16_t *)(&g_enc_rsv[4]);
+    g_enc_rxbcnt = (uint16_t *)(&g_enc_rsv[NPP_SIZE]);
+    g_enc_rxstat = (uint16_t *)(&g_enc_rsv[NPP_SIZE + 2]);
+    if(g_enc_eth_frame_buf != NULL) {
+        g_enc_eth_header = &g_enc_eth_frame_buf[NPP_SIZE + RSV_LEN];
+    } else {
+        g_enc_eth_header = (byte *) malloc(ETH_HEADER_BYTES);
+    }
+    g_enc_eth_src = g_enc_eth_header;
+    g_enc_eth_dst = &g_enc_eth_header[MAC_BYTES];
+    g_enc_eth_type = &g_enc_eth_header[MAC_BYTES + MAC_BYTES];
     if(g_enc_eth_frame_buf != NULL) {
         g_enc_sequence = (uint16_t *)(&g_enc_eth_frame_buf[
-            RSV_LEN + ETH_HEADER_BYTES
+            NPP_SIZE + RSV_LEN + ETH_HEADER_BYTES
         ]);
     } else {
         g_enc_sequence = (uint16_t *) malloc(sizeof(uint16_t));
@@ -911,10 +937,10 @@ void _enc_print_rxstat(uint16_t rxstat) {
 /**
  * Temporary MAC address storage
  */
-byte * mac = (byte *)malloc(MAC_BYTES*sizeof(byte));
+// byte * mac = (byte *)malloc(MAC_BYTES*sizeof(byte));
 
 
-inline void _print_mac() {
+inline void _print_mac(byte* mac) {
     for(int i=0; i<MAC_BYTES; i++){
         if(i>0) Serial.print(F(":"));
         print_hex_byte(mac[i]);
@@ -923,26 +949,23 @@ inline void _print_mac() {
 }
 
 void _enc_dump_pkt(int bcnt) {
-    enc_read_buf(mac, MAC_BYTES);
+    enc_read_buf(g_enc_eth_dst, MAC_BYTES);
     bcnt -= MAC_BYTES;
-    uint16_t typ_len = enc_read_buf_w();
+    enc_read_buf(g_enc_eth_src, MAC_BYTES);
+    bcnt -= MAC_BYTES;
+    enc_read_buf(g_enc_eth_type, ETHERTYPE_BYTES);
+    bcnt -= ETHERTYPE_BYTES;
+
+    // uint16_t typ_len = enc_read_buf_w();
     if( DEBUG_ETH ) {
         Serial.print(F("-> DA: "));
-        _print_mac();
-    }
-    enc_read_buf(mac, MAC_BYTES);
-    bcnt -= MAC_BYTES;
-    if( DEBUG_ETH ) {
+        _print_mac(g_enc_eth_dst);
         Serial.print(F("-> SA: "));
-        _print_mac();
+        _print_mac(g_enc_eth_src);
         Serial.print(F("-> TYP/LEN: "));
-        println_hex_byte(typ_len);
+        println_hex_byte(*g_enc_eth_type);
         Serial.print(F("-> (bcnt remaining): "));
         Serial.println(bcnt);
-    }
-    // *g_enc_sequence = enc_read_buf_w();
-    bcnt -= 1;
-    if( DEBUG_ETH ) {
         enc_peek_buf_slow(0, bcnt);
     }
 }
