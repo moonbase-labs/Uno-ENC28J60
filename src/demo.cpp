@@ -167,7 +167,6 @@
 // }
 
 int led_buffer_size = 4 * (N_LEDS + 2);
-byte * led_data = (byte *) malloc(led_buffer_size * sizeof(byte));
 
 // temporary storage of HSV colour space value for animations
 byte hsv[3];
@@ -208,6 +207,14 @@ void hsv2rgb(){
 void demo_rainbows() {
     // start_timer();
     byte * led_data;
+    if(!g_enc_eth_frame_buf){
+        led_data = (byte *) malloc(led_buffer_size);
+    } else {
+        led_data = &g_enc_eth_frame_buf[
+            RSV_LEN + ETH_HEADER_BYTES + SEQ_BYTES
+        ];
+    }
+
 
 
 
