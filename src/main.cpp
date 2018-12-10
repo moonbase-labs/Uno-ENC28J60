@@ -9,12 +9,12 @@ void setup() {
     Serial.begin(115200);
     Serial.println(F("SETUP"));
 
+    enc_init();
+
     Serial.print(F("freeMemory()="));
     Serial.println(freeMemory());
     Serial.print(F("g_enc_eth_frame_buf: 0x"));
     Serial.println((int)(g_enc_eth_frame_buf), HEX);
-    Serial.print(F("sizeof(byte)"));
-    Serial.println(sizeof(byte));
 
     spi_init();
 

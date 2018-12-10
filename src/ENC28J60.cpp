@@ -6,17 +6,45 @@
  */
 
 /**
+ * Yeah I know it's bad to overlap memory like this, but there's so little
+ * memory for me to play with.
+ * Note: this is a hack that only works if the endianness of the MCU is the
+ * same as the ENC ( Little Endian )
+ */
+byte * g_enc_eth_frame_buf = (byte *) malloc(MAX_FRAMELEN * sizeof(byte));
+/**
  * Temporary Recieve Status Vector storage
  * (including Next Packet Pointer because that's how Linux does it)
+ * Overlaps g_enc_eth_frame_buf
  */
-byte * g_enc_rsv = (byte *) malloc(RSV_SIZE * sizeof(byte));
-byte * g_enc_eth_frame_buf = (byte *) malloc(MAX_FRAMELEN);
-uint16_t g_enc_npp = RXSTART_INIT;
-uint16_t g_enc_rxstat = 0;
-uint16_t g_enc_rxbcnt = 0;
-enc_err g_enc_err = ENC_NO_ERR;
-uint16_t g_enc_sequence = 0;
+byte * g_enc_rsv = NULL;
+/**
+ *  Store the npp in the first and second bytes of g_enc_rsv;
+ */
+uint16_t * g_enc_npp = NULL;
+/**
+ *  Store the first half of RSV (Received bytes count) in the second and third
+ *  bytes of g_enc_rsv;
+ */
+uint16_t * g_enc_rxbcnt = NULL;
+/**
+ *  Store the second half of RSV (Status bits) in the fourth and fifth
+ *  bytes of g_enc_rsv;
+ */
+uint16_t * g_enc_rxstat = NULL;
+/**
+ *  The LED sequence number (used to determine if packets are sent out of order)
+ */
+uint16_t * g_enc_sequence = 0;
 
+/**
+ *  If any errors happen in ENC functions, an error value is stored here
+ */
+enc_err g_enc_err = ENC_NO_ERR;
+
+/**
+ *  Register cache
+ */
 byte g_enc_reg_econ1 = 0;
 byte g_enc_reg_econ2 = 0;
 byte g_enc_reg_estat = 0;
@@ -26,9 +54,39 @@ byte g_enc_reg_macon1 = 0;
 byte g_enc_reg_macon3 = 0;
 byte g_enc_reg_macon4 = 0;
 byte g_enc_reg_erxfcon = 0;
+
+/**
+ * Number of packets consumed (for calculating rates)
+ */
 long g_enc_pkts_consumed = 0;
+
+/**
+ * Dynamic Debugging flags
+ */
 bool g_enc_repeat_breakpoints = false;
 bool g_enc_debug_io = false;
+
+/**
+ * Initialize storage for ENC functions
+ * Try to re-use
+ */
+void enc_init() {
+    if(g_enc_eth_frame_buf != NULL) {
+        g_enc_rsv = g_enc_eth_frame_buf;
+    } else {
+        g_enc_rsv = (byte *) malloc(RSV_SIZE * sizeof(byte));
+    }
+    g_enc_npp = (uint16_t *)g_enc_rsv;
+    g_enc_rxbcnt = (uint16_t *)(&g_enc_rsv[2]);
+    g_enc_rxstat = (uint16_t *)(&g_enc_rsv[4]);
+    if(g_enc_eth_frame_buf != NULL) {
+        g_enc_sequence = (uint16_t *)(&g_enc_eth_frame_buf[
+            RSV_LEN + ETH_HEADER_BYTES
+        ]);
+    } else {
+        g_enc_sequence = (uint16_t *) malloc(sizeof(uint16_t));
+    }
+}
 
 inline byte _first_byte(byte op, byte arg) {
     // assembe first byte in operation from opcode and argument
@@ -882,7 +940,7 @@ void _enc_dump_pkt(int bcnt) {
         Serial.print(F("-> (bcnt remaining): "));
         Serial.println(bcnt);
     }
-    g_enc_sequence = enc_read_buf_w();
+    // *g_enc_sequence = enc_read_buf_w();
     bcnt -= 1;
     if( DEBUG_ETH ) {
         enc_peek_buf_slow(0, bcnt);
@@ -895,10 +953,10 @@ void _enc_dump_pkt(int bcnt) {
 void free_packet() {
     if(DEBUG_ETH_BASIC) {
         Serial.print(F("Freeing packet, advancing to 0x"));
-        println_hex_word(g_enc_npp);
+        println_hex_word(*g_enc_npp);
     }
-    enc_write_regw(ERDPTL, g_enc_npp);
-    enc_write_regw(ERXRDPTL, _erxrdpt_workaround(g_enc_npp, RXSTART_INIT, RXSTOP_INIT));
+    enc_write_regw(ERDPTL, *g_enc_npp);
+    enc_write_regw(ERXRDPTL, _erxrdpt_workaround(*g_enc_npp, RXSTART_INIT, RXSTOP_INIT));
     enc_bit_set(ECON2, ECON2_PKTDEC);
     g_enc_pkts_consumed++;
 }
@@ -910,17 +968,17 @@ void free_packet() {
 void _enc_refresh_rsv_globals() {
     enc_read_buf(g_enc_rsv, RSV_SIZE);
 
-    g_enc_npp = g_enc_rsv[1];
-    g_enc_npp <<= 8;
-    g_enc_npp |= g_enc_rsv[0];
+    // g_enc_npp = g_enc_rsv[1];
+    // g_enc_npp <<= 8;
+    // g_enc_npp |= g_enc_rsv[0];
 
-    g_enc_rxbcnt = g_enc_rsv[3];
-    g_enc_rxbcnt <<= 8;
-    g_enc_rxbcnt |= g_enc_rsv[2];
+    // g_enc_rxbcnt = g_enc_rsv[3];
+    // g_enc_rxbcnt <<= 8;
+    // g_enc_rxbcnt |= g_enc_rsv[2];
 
-    g_enc_rxstat = g_enc_rsv[5];
-    g_enc_rxstat <<= 8;
-    g_enc_rxstat |= g_enc_rsv[4];
+    // g_enc_rxstat = g_enc_rsv[5];
+    // g_enc_rxstat <<= 8;
+    // g_enc_rxstat |= g_enc_rsv[4];
 }
 
 /**
@@ -935,16 +993,16 @@ void enc_peek_npp_rsv_pkt() {
     _enc_refresh_rsv_globals();
 
     Serial.print(F("next packet: 0x"));
-    println_hex_byte(g_enc_npp);
+    println_hex_byte(*g_enc_npp);
 
-    Serial.print(F("g_enc_rxbcnt: "));
-    Serial.println(g_enc_rxbcnt);
+    Serial.print(F("rxbcnt: "));
+    Serial.println(*g_enc_rxbcnt);
 
     Serial.println(F("rxstat: "));
-    _enc_print_rxstat(g_enc_rxstat);
+    _enc_print_rxstat(*g_enc_rxstat);
 
     Serial.println(F("packet: "));
-    _enc_dump_pkt(g_enc_rxbcnt);
+    _enc_dump_pkt(*g_enc_rxbcnt);
 
     enc_write_regw(ERDPTL, old_erdpt);
 }

@@ -207,6 +207,9 @@ void hsv2rgb(){
 
 void demo_rainbows() {
     // start_timer();
+    byte * led_data;
+
+
 
     frame = (frame + 2) % 255;
     // Create start frame:
@@ -255,6 +258,10 @@ void demo_rainbows() {
     // Serial.println(F("read bytes from buffer to LED"));
 
     enc_read_buf((byte *) 0, led_buffer_size);
+
+    if(!g_enc_eth_frame_buf){
+        free(led_data);
+    }
 }
 
 /**
@@ -355,6 +362,17 @@ void demo_rainbows() {
  * Receive ethernet packets from the ENC
  */
 void demo_receive() {
+
+    byte * led_data;
+    if(!g_enc_eth_frame_buf){
+        led_data = (byte *) malloc(led_buffer_size);
+    } else {
+        led_data = &g_enc_eth_frame_buf[
+            RSV_LEN + ETH_HEADER_BYTES + SEQ_BYTES
+        ];
+    }
+
+
     enc_hw_init();
 
     // do {} while (!Serial.available());
@@ -385,7 +403,7 @@ void demo_receive() {
 
         uint16_t prev_sequence;
 
-        prev_sequence = g_enc_sequence;
+        prev_sequence = *g_enc_sequence;
         if(g_enc_err) {
             enc_regs_debug();
             Serial.print(F("ERROR, resetting "));
@@ -453,14 +471,14 @@ void demo_receive() {
 
         // if( DEBUG_ETH ) {
         //     Serial.print(F("next packet: 0x"));
-        //     print_hex_word(g_enc_npp);
+        //     print_hex_word(*g_enc_npp);
         //     Serial.print(F(", rxbcnt: "));
-        //     Serial.println(g_enc_rxbcnt);
+        //     Serial.println(*g_enc_rxbcnt);
         // }
 
-        if(RSV_GETBIT(g_enc_rxstat, RSV_ZERO)) {
+        if(RSV_GETBIT(*g_enc_rxstat, RSV_ZERO)) {
             Serial.println(F("RXSTAT corrupt, resetting"));
-            _enc_print_rxstat(g_enc_rxstat);
+            _enc_print_rxstat(*g_enc_rxstat);
             enc_regs_debug();
             break;
         }
@@ -477,57 +495,57 @@ void demo_receive() {
          */
 
         if(
-            RSV_GETBIT(g_enc_rxstat, RSV_RXCONTROLFRAME)
-            || RSV_GETBIT(g_enc_rxstat, RSV_CRCERROR)
-            || RSV_GETBIT(g_enc_rxstat, RSV_DRIBBLENIBBLE)
+            RSV_GETBIT(*g_enc_rxstat, RSV_RXCONTROLFRAME)
+            || RSV_GETBIT(*g_enc_rxstat, RSV_CRCERROR)
+            || RSV_GETBIT(*g_enc_rxstat, RSV_DRIBBLENIBBLE)
         ) {
             // don't care about control frames, CRC or Dribblenibbles yet
             free_packet();
             continue;
         }
 
-        if(!RSV_GETBIT(g_enc_rxstat, RSV_RXOK)) {
+        if(!RSV_GETBIT(*g_enc_rxstat, RSV_RXOK)) {
             Serial.println(F("RX not ok, "));
             Serial.println(F("rxstat:"));
-            _enc_print_rxstat(g_enc_rxstat);
+            _enc_print_rxstat(*g_enc_rxstat);
             enc_regs_debug();
             free_packet();
             continue;
         }
 
-        if((g_enc_rxbcnt > MAX_FRAMELEN)) {
+        if((*g_enc_rxbcnt > MAX_FRAMELEN)) {
             Serial.print(F("Length not ok, "));
-            Serial.print(g_enc_rxbcnt);
+            Serial.print(*g_enc_rxbcnt);
             Serial.print(F(" > MAX_FRAMELEN: "));
             Serial.println(MAX_FRAMELEN);
             Serial.println(F("rxstat:"));
-            _enc_print_rxstat(g_enc_rxstat);
+            _enc_print_rxstat(*g_enc_rxstat);
             Serial.println(F("header: "));
             _enc_dump_pkt(ETH_HEADER_BYTES);
             break;
         }
 
-        if((g_enc_rxbcnt < ETH_HEADER_BYTES)) {
+        if((*g_enc_rxbcnt < ETH_HEADER_BYTES)) {
             Serial.print(F("Length not ok, "));
-            Serial.print(g_enc_rxbcnt);
+            Serial.print(*g_enc_rxbcnt);
             Serial.print(F(" < ETH_HEADER_BYTES: "));
             Serial.println(ETH_HEADER_BYTES);
             Serial.println(F("rxstat:"));
-            _enc_print_rxstat(g_enc_rxstat);
+            _enc_print_rxstat(*g_enc_rxstat);
             break;
         }
 
-        if(((int)(g_enc_npp) < RXSTART_INIT)) {
+        if(((int)(*g_enc_npp) < RXSTART_INIT)) {
             Serial.print(F("Next Packet Pointer out of bounds: 0x"));
-            print_hex_word(g_enc_npp);
+            print_hex_word(*g_enc_npp);
             Serial.print(F(" < RXSTART_INIT: 0x"));
             println_hex_word(RXSTART_INIT);
             break;
         }
 
-        if(((int)(g_enc_npp) > RXSTOP_INIT)) {
+        if(((int)(*g_enc_npp) > RXSTOP_INIT)) {
             Serial.print(F("Next Packet Pointer out of bounds: 0x"));
-            print_hex_word(g_enc_npp);
+            print_hex_word(*g_enc_npp);
             Serial.print(F(" > RXSTOP_INIT: 0x"));
             println_hex_word(RXSTOP_INIT);
             break;
@@ -535,44 +553,44 @@ void demo_receive() {
 
         if( DEBUG_ETH ) {
             Serial.println(F("packet: "));
-            _enc_dump_pkt(g_enc_rxbcnt);
-            _enc_print_rxstat(g_enc_rxstat);
-            // enc_peek_buf(ETH_HEADER_BYTES, g_enc_rxbcnt-ETH_HEADER_BYTES);
+            _enc_dump_pkt(*g_enc_rxbcnt);
+            _enc_print_rxstat(*g_enc_rxstat);
+            // enc_peek_buf(ETH_HEADER_BYTES, *g_enc_rxbcnt-ETH_HEADER_BYTES);
         }
 
         uint16_t data_start = _buffer_sum(old_erdpt, 2 + RSV_LEN + ETH_HEADER_BYTES);
-        uint16_t data_len = _buffer_distance(data_start, g_enc_npp);
+        uint16_t data_len = _buffer_distance(data_start, *g_enc_npp);
 
         enc_write_regw(ERDPTL, data_start);
 
-        g_enc_sequence = enc_read_buf_w();
+        *g_enc_sequence = enc_read_buf_w();
 
         if(DEBUG_ETH_BASIC) {
             Serial.print(F("sequence: "));
-            print_hex_word(g_enc_sequence);
+            print_hex_word(*g_enc_sequence);
             Serial.print(F(", rxbcnt: "));
-            Serial.println(g_enc_rxbcnt);
+            Serial.println(*g_enc_rxbcnt);
         }
 
         dump_packet = true;
 
         if(
-            (prev_sequence >= g_enc_sequence)
-            && (prev_sequence - g_enc_sequence < (MAX_SEQUENCE / 2))
+            (prev_sequence >= *g_enc_sequence)
+            && (prev_sequence - *g_enc_sequence < (MAX_SEQUENCE / 2))
         ) {
             Serial.print(F("out of order! prev: "));
             print_hex_word(prev_sequence);
             Serial.print(", this: ");
-            println_hex_word(g_enc_sequence);
+            println_hex_word(*g_enc_sequence);
 
             dump_packet = false;
         }
 
-        if(g_enc_sequence - prev_sequence > 1) {
+        if(*g_enc_sequence - prev_sequence > 1) {
             Serial.print(F("skipped seq! prev: "));
             print_hex_word(prev_sequence);
             Serial.print(", this: ");
-            println_hex_word(g_enc_sequence);
+            println_hex_word(*g_enc_sequence);
         }
 
         if(dump_packet) {
@@ -584,7 +602,7 @@ void demo_receive() {
             }
 
             // }
-            // enc_read_buf(0, g_enc_rxbcnt - 1);
+            // enc_read_buf(0, *g_enc_rxbcnt - 1);
         }
 
         free_packet();
@@ -594,7 +612,7 @@ void demo_receive() {
         if( SOMETIMES_PRINT_COND) {
             float pps = (float)(1000.0 * g_enc_pkts_consumed) / (float)(probe_timer());
             Serial.print(F("SEQ:"));
-            print_hex_word(g_enc_sequence);
+            print_hex_word(*g_enc_sequence);
             Serial.print(F(" CNT:"));
             print_hex_byte(epktcnt);
             Serial.print(F(" PPS:"));
@@ -607,4 +625,9 @@ void demo_receive() {
 
     enc_hw_disable();
 
+    if(!g_enc_eth_frame_buf){
+        free(led_data);
+    }
+
+}
 }

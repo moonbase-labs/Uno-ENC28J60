@@ -343,7 +343,9 @@
  */
 
 #define MAC_BYTES 6
-#define ETH_HEADER_BYTES (MAC_BYTES * 2 + 2)
+#define ETHERTYPE_BYTES 2
+#define ETH_HEADER_BYTES (MAC_BYTES + MAC_BYTES + ETHERTYPE_BYTES)
+#define SEQ_BYTES 2
 
 #define DEBUG_ETH 0
 #define DEBUG_ETH_BASIC 0
@@ -357,7 +359,7 @@ Serial.print(F(" | SPCR is 0x")); \
 Serial.print(SPCR, HEX)
 
 
-
+void enc_init();
 void enc_op_write(byte op, byte arg, byte data);
 byte enc_op_read(uint8_t op, uint8_t arg);
 void enc_soft_reset();
@@ -390,12 +392,12 @@ uint16_t _buffer_distance(int from, int to);
 void free_packet();
 void enc_peek_buf_slow(int offset, int len);
 
-extern uint16_t g_enc_npp;
-extern uint16_t g_enc_rxstat;
+extern uint16_t * g_enc_npp;
+extern uint16_t * g_enc_rxstat;
 extern byte * g_enc_rsv;
-extern uint16_t g_enc_rxbcnt;
+extern uint16_t * g_enc_rxbcnt;
 extern byte * g_enc_eth_frame_buf;
-extern uint16_t g_enc_sequence;
+extern uint16_t * g_enc_sequence;
 extern long g_enc_pkts_consumed;
 extern bool g_enc_repeat_breakpoints;
 extern bool g_enc_debug_io;
