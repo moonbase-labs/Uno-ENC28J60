@@ -566,12 +566,19 @@ void demo_receive() {
             // enc_peek_buf(ETH_HEADER_BYTES, *g_enc_rxbcnt-ETH_HEADER_BYTES);
         }
 
+        /**
+         *  Reset ERDPT to start of ethernet body
+         *  TODO: This may not be necessary if buffer is managed correctly.
+         */
         uint16_t data_start = _buffer_sum(old_erdpt, NPP_SIZE + RSV_LEN + ETH_HEADER_BYTES);
         uint16_t data_len = _buffer_distance(data_start, *g_enc_npp);
-
         enc_write_regw(ERDPTL, data_start);
 
-        *g_enc_sequence = enc_read_buf_w();
+        enc_read_buf((byte *)(g_enc_sequence), SEQ_BYTES);
+
+        /**
+         *  ERDPT Is now 2 bytes in to ethernet body (LED data starts here)
+         */
 
         if(DEBUG_ETH_BASIC) {
             Serial.print(F("sequence: "));
